@@ -6,3 +6,6 @@ springfox:
     swagger:
       v2:
         path: /v1/swagger-docs
+        
+# Note these are default values that will be overriden by aws secrets manager values 
+notify-api-key:

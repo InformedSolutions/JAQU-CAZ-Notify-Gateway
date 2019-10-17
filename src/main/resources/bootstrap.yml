@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: notify-gateway
+
+aws:
+  secretsmanager:
+    prefix: /config
+    defaultContext: notify.dev
+    profileSeparator: .
+    failFast: true
+    enabled: true
+
+cloud:
+  aws:
+    region:
+      auto: false
+      static: eu-west-2
+    stack:
+      auto: false
