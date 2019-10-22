@@ -2,6 +2,8 @@ package uk.gov.caz.notify.controller;
 
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import uk.gov.caz.notify.domain.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyRepository;
 import uk.gov.service.notify.NotificationClientException;
@@ -26,16 +28,27 @@ public class ManualDispatchController {
 
   public ManualDispatchController(GovUkNotifyRepository govUkNotifyRepository) {
     this.govUkNotifyRepository = govUkNotifyRepository;
-
   }
 
-  @GetMapping("/sendEmail")
   @ApiOperation(value = "Manually dispatch an email",
       response = ResponseEntity.class)
-  public SendEmailResponse sendEmail(@RequestBody SendEmailRequest request)
-      throws JsonParseException, JsonMappingException,
-      NotificationClientException, IOException {
-    return govUkNotifyRepository.sendEmail(request.templateId,
-        request.emailAddress, request.personalisation, request.reference);
+  @ApiResponses({
+      @ApiResponse(code = 503, message = "External service unavailable"),
+      @ApiResponse(code = 500, message = "Internal server error"),
+      @ApiResponse(code = 429, message = "Rate limit exceeded"),
+      @ApiResponse(code = 400, message = "Bad request"),
+      @ApiResponse(code = 200, message = "Email sent"),})
+  @GetMapping("/sendEmail")
+  public ResponseEntity<SendEmailResponse> sendEmail(
+      @RequestBody SendEmailRequest request)
+      throws NotificationClientException {
+    try {
+      SendEmailResponse sendEmailResponse =
+          govUkNotifyRepository.sendEmail(request.templateId,
+              request.emailAddress, request.personalisation, request.reference);
+      return ResponseEntity.ok(sendEmailResponse);
+    } catch (IOException e) {
+      return ResponseEntity.badRequest().build();
+    }
   }
 }
