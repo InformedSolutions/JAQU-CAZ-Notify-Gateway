@@ -26,8 +26,7 @@ public class GovUkNotifyRepository {
 
   public SendEmailResponse sendEmail(String templateId, String emailAddress,
       String personalisation, String reference)
-      throws NotificationClientException, JsonParseException,
-      JsonMappingException, IOException {
+      throws NotificationClientException, JsonParseException, IOException {
     HashMap<String, Object> personalisationMap =
         new ObjectMapper().readValue(personalisation, HashMap.class);
     return client.sendEmail(templateId, emailAddress, personalisationMap,
