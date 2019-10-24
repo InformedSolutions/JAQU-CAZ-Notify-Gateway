@@ -5,10 +5,6 @@ import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Import;
-import uk.gov.caz.notify.configuration.RequestMappingConfiguration;
-import uk.gov.caz.notify.configuration.SwaggerConfiguration;
-import uk.gov.caz.notify.controller.ManualDispatchController;
 
 @SpringBootConfiguration
 @EnableAutoConfiguration
