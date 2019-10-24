@@ -12,8 +12,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
@@ -54,13 +52,10 @@ public class GovUkNotifyRepositoryTest {
    * Successful email test
    * 
    * @throws NotificationClientException
-   * @throws JsonParseException
-   * @throws JsonMappingException
    * @throws IOException
    */
   @Test
-  public void canSendAnEmail() throws NotificationClientException,
-      JsonParseException, JsonMappingException, IOException {
+  public void canSendAnEmail() throws NotificationClientException, IOException {
     Mockito
         .when(client.sendEmail(Mockito.anyString(), Mockito.anyString(),
             Mockito.anyMap(), Mockito.anyString()))
@@ -74,13 +69,12 @@ public class GovUkNotifyRepositoryTest {
   }
 
   @Test
-  public void jsonParseErrorThrown()
-      throws NotificationClientException, JsonMappingException, IOException {
+  public void ioErrorThrown() throws NotificationClientException {
     String personalisation = "{\"testJustKey\"}";
     try {
       govUkNotifyRepository.sendEmail(templateId, emailAddress, personalisation,
           reference);
-    } catch (JsonParseException e) {
+    } catch (IOException e) {
       assertNotNull(e);
     }
   }
@@ -88,13 +82,10 @@ public class GovUkNotifyRepositoryTest {
   /**
    * Bad request error test
    * 
-   * @throws JsonParseException
-   * @throws JsonMappingException
    * @throws IOException
    */
   @Test
-  public void throwsBadRequestError()
-      throws JsonParseException, JsonMappingException, IOException {
+  public void throwsBadRequestError() throws IOException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 400 + " " + null);
     try {
@@ -110,13 +101,10 @@ public class GovUkNotifyRepositoryTest {
   /**
    * Authentication error test
    * 
-   * @throws JsonParseException
-   * @throws JsonMappingException
    * @throws IOException
    */
   @Test
-  public void throwsAuthError()
-      throws JsonParseException, JsonMappingException, IOException {
+  public void throwsAuthError() throws IOException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 403 + " " + null);
     try {
@@ -132,13 +120,10 @@ public class GovUkNotifyRepositoryTest {
   /**
    * Too Many Requests error test
    * 
-   * @throws JsonParseException
-   * @throws JsonMappingException
    * @throws IOException
    */
   @Test
-  public void throwsTooManyRequestsError()
-      throws JsonParseException, JsonMappingException, IOException {
+  public void throwsTooManyRequestsError() throws IOException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 429 + " " + null);
     try {
@@ -154,13 +139,10 @@ public class GovUkNotifyRepositoryTest {
   /**
    * Internal Server Error test
    * 
-   * @throws JsonParseException
-   * @throws JsonMappingException
    * @throws IOException
    */
   @Test
-  public void throwsInternalServerError()
-      throws JsonParseException, JsonMappingException, IOException {
+  public void throwsInternalServerError() throws IOException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 500 + " " + null);
     try {
@@ -176,13 +158,10 @@ public class GovUkNotifyRepositoryTest {
   /**
    * Service Unavailable error test
    * 
-   * @throws JsonParseException
-   * @throws JsonMappingException
    * @throws IOException
    */
   @Test
-  public void throwsServiceDownError()
-      throws JsonParseException, JsonMappingException, IOException {
+  public void throwsServiceDownError() throws IOException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 503 + " " + null);
     try {

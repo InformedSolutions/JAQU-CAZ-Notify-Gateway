@@ -4,10 +4,6 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
-import uk.gov.caz.notify.domain.SendEmailRequest;
-import uk.gov.caz.notify.repository.GovUkNotifyRepository;
-import uk.gov.service.notify.NotificationClientException;
-import uk.gov.service.notify.SendEmailResponse;
 import java.io.IOException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,8 +11,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
+import uk.gov.caz.notify.domain.SendEmailRequest;
+import uk.gov.caz.notify.repository.GovUkNotifyRepository;
+import uk.gov.service.notify.NotificationClientException;
+import uk.gov.service.notify.SendEmailResponse;
 
 @RestController
 @RequestMapping(value = "/notify", produces = {
@@ -30,6 +28,16 @@ public class ManualDispatchController {
     this.govUkNotifyRepository = govUkNotifyRepository;
   }
 
+  /**
+   * A controller method to manually dispatch an email.
+   * 
+   * @param  request                     containing email, templateId, reference
+   *                                       and personalisation
+   * @return                             a response entity containing the Gov.UK
+   *                                     Notify response
+   * @throws NotificationClientException any error that may be thrown by Gov.UK
+   *                                       Notify
+   */
   @ApiOperation(value = "Manually dispatch an email",
       response = ResponseEntity.class)
   @ApiResponses({

@@ -12,8 +12,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import uk.gov.caz.notify.domain.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyRepository;
 import uk.gov.service.notify.NotificationClientException;
@@ -71,11 +69,10 @@ class ManualDispatchControllerTest {
   }
 
   @Test
-  void canGetBadRequestError()
-      throws JsonParseException, NotificationClientException, IOException {
+  void canGetBadRequestError() throws NotificationClientException, IOException {
     Mockito.when(govUkNotifyRepository.sendEmail(templateId,
         sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
-        reference)).thenThrow(new JsonParseException(null, "bad json"));
+        reference)).thenThrow(new IOException());
 
     ResponseEntity<SendEmailResponse> testResponse =
         manualDispatchController.sendEmail(sendEmailRequest);
