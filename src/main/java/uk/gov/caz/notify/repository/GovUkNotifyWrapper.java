@@ -4,22 +4,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 import uk.gov.service.notify.NotificationClient;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
 
-@Repository
-public class GovUkNotifyRepository {
+@Component
+public class GovUkNotifyWrapper {
 
   private NotificationClient client;
 
   /**
-   * GovUkNotifyRepository constructor.
+   * GovUkNotifyWrapper constructor.
    * 
    * @param notifyApiKey as retrieved from AWS secrets
    */
-  public GovUkNotifyRepository(
+  public GovUkNotifyWrapper(
       @Value("${notify-api-key-team}") String notifyApiKey) {
     if (notifyApiKey != null && !(notifyApiKey.isEmpty())) {
       this.client = new NotificationClient(notifyApiKey);
