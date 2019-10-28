@@ -20,7 +20,7 @@ public class GovUkNotifyRepository {
    * @param notifyApiKey as retrieved from AWS secrets
    */
   public GovUkNotifyRepository(
-      @Value("${notify-api-key}") String notifyApiKey) {
+      @Value("${notify-api-key-team}") String notifyApiKey) {
     if (notifyApiKey != null && !(notifyApiKey.isEmpty())) {
       this.client = new NotificationClient(notifyApiKey);
     }

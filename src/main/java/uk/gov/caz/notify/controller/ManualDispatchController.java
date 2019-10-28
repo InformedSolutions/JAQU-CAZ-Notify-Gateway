@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import uk.gov.caz.notify.domain.SendEmailRequest;
+import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyRepository;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;

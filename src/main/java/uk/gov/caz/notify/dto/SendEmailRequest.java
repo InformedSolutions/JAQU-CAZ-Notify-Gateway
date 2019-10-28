@@ -1,5 +1,8 @@
-package uk.gov.caz.notify.domain;
+package uk.gov.caz.notify.dto;
 
+import lombok.Data;
+
+@Data
 public class SendEmailRequest {
 
   public String templateId;
