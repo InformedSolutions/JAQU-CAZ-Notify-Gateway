@@ -30,16 +30,16 @@ public class MessagingListener {
   @SqsListener(value = "${application.queue.new}",
       deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
   public void consumeMessage(SendEmailRequest sendEmailRequest) {
-    log.info("Received message: {}", sendEmailRequest.reference);
+    log.debug("Received message: {}", sendEmailRequest.reference);
     try {
       govUkNotifyRepository.sendEmail(sendEmailRequest.templateId,
           sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
           sendEmailRequest.reference);
-      log.info("Message successfully sent: {}", sendEmailRequest.reference);
+      log.debug("Message successfully sent: {}", sendEmailRequest.reference);
     } catch (NotificationClientException e) {
-      log.debug(e.getMessage());
+      log.warn(e.getMessage());
     } catch (IOException e) {
-      log.debug(e.getMessage());
+      log.warn(e.getMessage());
     }
   }
 }
