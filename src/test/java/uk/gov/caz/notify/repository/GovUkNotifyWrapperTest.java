@@ -17,9 +17,9 @@ import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
 
 @ExtendWith(MockitoExtension.class)
-public class GovUkNotifyRepositoryTest {
+public class GovUkNotifyWrapperTest {
 
-  GovUkNotifyRepository govUkNotifyRepository;
+  GovUkNotifyWrapper govUkNotifyWrapper;
 
   @Mock
   NotificationClient client;
@@ -33,8 +33,8 @@ public class GovUkNotifyRepositoryTest {
 
   @BeforeEach
   void init() {
-    govUkNotifyRepository = new GovUkNotifyRepository(null);
-    ReflectionTestUtils.setField(govUkNotifyRepository, "client", client);
+    govUkNotifyWrapper = new GovUkNotifyWrapper(null);
+    ReflectionTestUtils.setField(govUkNotifyWrapper, "client", client);
     reference = UUID.randomUUID().toString();
     templateId = UUID.randomUUID().toString();
     String response = new JSONObject().put("id", UUID.randomUUID().toString())
@@ -61,7 +61,7 @@ public class GovUkNotifyRepositoryTest {
             Mockito.anyMap(), Mockito.anyString()))
         .thenReturn(sendEmailResponse);
 
-    SendEmailResponse testResponse = govUkNotifyRepository.sendEmail(templateId,
+    SendEmailResponse testResponse = govUkNotifyWrapper.sendEmail(templateId,
         emailAddress, personalisation, reference);
     assertEquals(templateId, testResponse.getTemplateId().toString());
     assertEquals(reference, testResponse.getReference().get());
@@ -72,7 +72,7 @@ public class GovUkNotifyRepositoryTest {
   public void ioErrorThrown() throws NotificationClientException {
     String personalisation = "{\"testJustKey\"}";
     try {
-      govUkNotifyRepository.sendEmail(templateId, emailAddress, personalisation,
+      govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation,
           reference);
     } catch (IOException e) {
       assertNotNull(e);
@@ -91,7 +91,7 @@ public class GovUkNotifyRepositoryTest {
     try {
       Mockito.when(client.sendEmail(Mockito.anyString(), Mockito.anyString(),
           Mockito.anyMap(), Mockito.anyString())).thenThrow(err);
-      govUkNotifyRepository.sendEmail(templateId, emailAddress, personalisation,
+      govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation,
           reference);
     } catch (NotificationClientException e) {
       assertEquals("Status code: 400 null", e.getMessage());
@@ -110,7 +110,7 @@ public class GovUkNotifyRepositoryTest {
     try {
       Mockito.when(client.sendEmail(Mockito.anyString(), Mockito.anyString(),
           Mockito.anyMap(), Mockito.anyString())).thenThrow(err);
-      govUkNotifyRepository.sendEmail(templateId, emailAddress, personalisation,
+      govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation,
           reference);
     } catch (NotificationClientException e) {
       assertEquals("Status code: 403 null", e.getMessage());
@@ -129,7 +129,7 @@ public class GovUkNotifyRepositoryTest {
     try {
       Mockito.when(client.sendEmail(Mockito.anyString(), Mockito.anyString(),
           Mockito.anyMap(), Mockito.anyString())).thenThrow(err);
-      govUkNotifyRepository.sendEmail(templateId, emailAddress, personalisation,
+      govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation,
           reference);
     } catch (NotificationClientException e) {
       assertEquals("Status code: 429 null", e.getMessage());
@@ -148,7 +148,7 @@ public class GovUkNotifyRepositoryTest {
     try {
       Mockito.when(client.sendEmail(Mockito.anyString(), Mockito.anyString(),
           Mockito.anyMap(), Mockito.anyString())).thenThrow(err);
-      govUkNotifyRepository.sendEmail(templateId, emailAddress, personalisation,
+      govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation,
           reference);
     } catch (NotificationClientException e) {
       assertEquals("Status code: 500 null", e.getMessage());
@@ -167,7 +167,7 @@ public class GovUkNotifyRepositoryTest {
     try {
       Mockito.when(client.sendEmail(Mockito.anyString(), Mockito.anyString(),
           Mockito.anyMap(), Mockito.anyString())).thenThrow(err);
-      govUkNotifyRepository.sendEmail(templateId, emailAddress, personalisation,
+      govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation,
           reference);
     } catch (NotificationClientException e) {
       assertEquals("Status code: 503 null", e.getMessage());

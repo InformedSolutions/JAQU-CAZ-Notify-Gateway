@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.caz.notify.dto.SendEmailRequest;
-import uk.gov.caz.notify.repository.GovUkNotifyRepository;
+import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
 
@@ -22,10 +22,10 @@ import uk.gov.service.notify.SendEmailResponse;
 @Api(value = "/notify")
 public class ManualDispatchController {
 
-  private final GovUkNotifyRepository govUkNotifyRepository;
+  private final GovUkNotifyWrapper govUkNotifyWrapper;
 
-  public ManualDispatchController(GovUkNotifyRepository govUkNotifyRepository) {
-    this.govUkNotifyRepository = govUkNotifyRepository;
+  public ManualDispatchController(GovUkNotifyWrapper govUkNotifyWrapper) {
+    this.govUkNotifyWrapper = govUkNotifyWrapper;
   }
 
   /**
@@ -52,7 +52,7 @@ public class ManualDispatchController {
       throws NotificationClientException {
     try {
       SendEmailResponse sendEmailResponse =
-          govUkNotifyRepository.sendEmail(request.templateId,
+          govUkNotifyWrapper.sendEmail(request.templateId,
               request.emailAddress, request.personalisation, request.reference);
       return ResponseEntity.ok(sendEmailResponse);
     } catch (IOException e) {

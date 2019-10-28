@@ -7,7 +7,7 @@ import org.springframework.cloud.aws.messaging.listener.SqsMessageDeletionPolicy
 import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
 import org.springframework.stereotype.Component;
 import uk.gov.caz.notify.dto.SendEmailRequest;
-import uk.gov.caz.notify.repository.GovUkNotifyRepository;
+import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
 import uk.gov.service.notify.NotificationClientException;
 
 @Component
@@ -16,10 +16,10 @@ import uk.gov.service.notify.NotificationClientException;
     matchIfMissing = false)
 public class MessagingListener {
 
-  private final GovUkNotifyRepository govUkNotifyRepository;
+  private final GovUkNotifyWrapper govUkNotifyWrapper;
 
-  public MessagingListener(GovUkNotifyRepository govUkNotifyRepository) {
-    this.govUkNotifyRepository = govUkNotifyRepository;
+  public MessagingListener(GovUkNotifyWrapper govUkNotifyWrapper) {
+    this.govUkNotifyWrapper = govUkNotifyWrapper;
   }
 
   /**
@@ -32,7 +32,7 @@ public class MessagingListener {
   public void consumeMessage(SendEmailRequest sendEmailRequest) {
     log.debug("Received message: {}", sendEmailRequest.reference);
     try {
-      govUkNotifyRepository.sendEmail(sendEmailRequest.templateId,
+      govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
           sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
           sendEmailRequest.reference);
       log.debug("Message successfully sent: {}", sendEmailRequest.reference);

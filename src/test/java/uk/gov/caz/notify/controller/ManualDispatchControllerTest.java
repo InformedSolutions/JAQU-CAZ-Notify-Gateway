@@ -13,7 +13,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import uk.gov.caz.notify.dto.SendEmailRequest;
-import uk.gov.caz.notify.repository.GovUkNotifyRepository;
+import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
 
@@ -24,7 +24,7 @@ class ManualDispatchControllerTest {
   ManualDispatchController manualDispatchController;
 
   @Mock
-  GovUkNotifyRepository govUkNotifyRepository;
+  GovUkNotifyWrapper govUkNotifyWrapper;
 
   SendEmailRequest sendEmailRequest;
   SendEmailResponse sendEmailResponse;
@@ -59,7 +59,7 @@ class ManualDispatchControllerTest {
 
   @Test
   void canSendEmail() throws NotificationClientException, IOException {
-    Mockito.when(govUkNotifyRepository.sendEmail(templateId,
+    Mockito.when(govUkNotifyWrapper.sendEmail(templateId,
         sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
         reference)).thenReturn(sendEmailResponse);
 
@@ -70,7 +70,7 @@ class ManualDispatchControllerTest {
 
   @Test
   void canGetBadRequestError() throws NotificationClientException, IOException {
-    Mockito.when(govUkNotifyRepository.sendEmail(templateId,
+    Mockito.when(govUkNotifyWrapper.sendEmail(templateId,
         sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
         reference)).thenThrow(new IOException());
 
