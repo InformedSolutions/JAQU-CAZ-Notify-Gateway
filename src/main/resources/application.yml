@@ -1,5 +1,6 @@
 application:
   title: Notify Gateway
+  consume: true
   queue:
     new: testQueue.fifo
 
@@ -10,4 +11,5 @@ springfox:
         path: /v1/swagger-docs
         
 # Note these are default values that will be overriden by aws secrets manager values 
-notify-api-key:
+notify-api-key-dev:
+notify-api-key-team:

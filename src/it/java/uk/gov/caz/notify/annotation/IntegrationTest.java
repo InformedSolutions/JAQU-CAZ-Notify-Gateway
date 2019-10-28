@@ -9,7 +9,8 @@ import org.springframework.test.context.ActiveProfiles;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@SpringBootTest(properties = "aws.secretsmanager.enabled=false")
+@SpringBootTest(properties = {"aws.secretsmanager.enabled=false",
+    "application.consume=false"})
 @ActiveProfiles("localstack")
 public @interface IntegrationTest {
 

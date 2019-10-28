@@ -12,7 +12,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
-import uk.gov.caz.notify.domain.SendEmailRequest;
+import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyRepository;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
