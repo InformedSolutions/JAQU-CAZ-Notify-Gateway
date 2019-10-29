@@ -47,7 +47,7 @@ steps:
 
   # Unit test
   - name: unit test
-    image: payments-api-base
+    image: notification-gateway-api-base
     pull: never
     volumes:
       - name: package_directory
@@ -67,7 +67,7 @@ steps:
 
   # Scan with sonar
   - name: sonar scan
-    image: payments-api-base
+    image: notification-gateway-api-base
     volumes:
       - name: package_directory
         path: /drone/src/target
@@ -97,7 +97,7 @@ steps:
 
   # Package
   - name: package
-    image: payments-api-base
+    image: notification-gateway-api-base
     volumes:
       - name: package_directory
         path: /drone/src/target
