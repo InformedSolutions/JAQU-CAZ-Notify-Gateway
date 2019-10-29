@@ -40,7 +40,7 @@ steps:
   - name: build docker maven base
     image: docker
     commands:
-      - docker build -t notification-gateway-base -f ci-cd-resources/Dockerfile.ci.base .
+      - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
     volumes:
       - name: docker_sock
         path: /var/run/docker.sock
