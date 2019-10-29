@@ -2,7 +2,7 @@ application:
   title: Notify Gateway
   consume: true
   queue:
-    new: testQueue.fifo
+    new: notify-gateway_new_dev
 
 springfox:
   documentation:
