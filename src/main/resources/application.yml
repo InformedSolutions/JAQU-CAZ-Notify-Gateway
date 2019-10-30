@@ -2,7 +2,11 @@ application:
   title: Notify Gateway
   consume: true
   queue:
-    new: testQueue.fifo
+    new: notify-gateway_new_dev.fifo
+    dlq: notify-gateway_dlq_dev.fifo
+    request-limit: notify-gateway_request_limit_dev.fifo
+    service-down: notify-gateway_service_down_dev.fifo
+    service-error: notify-gateway_service_error_dev.fifo
 
 springfox:
   documentation:
