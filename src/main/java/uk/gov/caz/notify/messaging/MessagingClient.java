@@ -1,15 +1,18 @@
 package uk.gov.caz.notify.messaging;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cloud.aws.messaging.core.QueueMessagingTemplate;
+import org.springframework.cloud.aws.messaging.core.SqsMessageHeaders;
 import org.springframework.cloud.aws.messaging.listener.SqsMessageDeletionPolicy;
 import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
+import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.stereotype.Component;
-import uk.gov.caz.notify.dto.NotifyErrorResponse;
 import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
 import uk.gov.service.notify.NotificationClientException;
@@ -42,8 +45,9 @@ public class MessagingClient {
     this.messagingTemplate = messagingTemplate;
   }
 
-  private void publishMessage(String queueName, Object message) {
-    messagingTemplate.convertAndSend(queueName, message);
+  private void publishMessage(String queueName, Object message,
+      Map<String, Object> headers) {
+    messagingTemplate.convertAndSend(queueName, message, headers);
   }
 
   /**
@@ -53,8 +57,12 @@ public class MessagingClient {
    */
   @SqsListener(value = "${application.queue.new}",
       deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
-  public void consumeMessage(SendEmailRequest sendEmailRequest) {
+  public void consumeMessage(SendEmailRequest sendEmailRequest,
+      @Headers Map<String, Object> headers) {
     log.debug("Received message: {}", sendEmailRequest.reference);
+    Map<String, Object> newHeaders = filterHeaders(headers);
+
+    // attempt to send email
     try {
       govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
           sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
@@ -62,17 +70,16 @@ public class MessagingClient {
       log.debug("Message successfully sent: {}", sendEmailRequest.reference);
     } catch (NotificationClientException e) {
       int status = e.getHttpResult();
+      log.error(e.getMessage());
 
-      NotifyErrorResponse msg =
-          new NotifyErrorResponse(status, e.getMessage(), sendEmailRequest);
       boolean success;
 
       switch (status) {
         case 400:
-          publishMessage(dlq, msg);
+          publishMessage(dlq, sendEmailRequest, newHeaders);
           break;
         case 403:
-          publishMessage(dlq, msg);
+          publishMessage(dlq, sendEmailRequest, newHeaders);
           break;
         case 429:
           success = retryMessage(sendEmailRequest, 3);
@@ -80,7 +87,7 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(requestLimit, msg);
+            publishMessage(requestLimit, sendEmailRequest, newHeaders);
           }
           break;
         case 500:
@@ -89,7 +96,7 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(serviceError, msg);
+            publishMessage(serviceError, sendEmailRequest, newHeaders);
           }
           break;
         case 503:
@@ -98,7 +105,7 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(serviceDown, msg);
+            publishMessage(serviceDown, sendEmailRequest, newHeaders);
           }
           break;
         default:
@@ -107,16 +114,25 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(dlq, msg);
+            publishMessage(dlq, sendEmailRequest, newHeaders);
           }
           break;
       }
     } catch (IOException e) {
-      NotifyErrorResponse msg =
-          new NotifyErrorResponse(400, e.getMessage(), sendEmailRequest);
-      // publishMessage(dlq, msg);
-      log.info(msg.toString());
+      log.error(e.getMessage());
+      publishMessage(dlq, sendEmailRequest, newHeaders);
     }
+  }
+
+  private Map<String, Object> filterHeaders(Map<String, Object> oldHeaders) {
+    Map<String, Object> newHeaders = new HashMap<String, Object>();
+
+    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER,
+        oldHeaders.get("MessageGroupId"));
+    newHeaders.put(SqsMessageHeaders.SQS_DEDUPLICATION_ID_HEADER,
+        UUID.randomUUID().toString());
+
+    return newHeaders;
   }
 
   /**
