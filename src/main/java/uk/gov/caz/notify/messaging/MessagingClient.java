@@ -80,6 +80,8 @@ public class MessagingClient {
    */
   private boolean retryMessage(SendEmailRequest sendEmailRequest, int i) {
     while (i > 0) {
+      log.debug("Retrying message with reference: {}",
+          sendEmailRequest.reference);
       try {
         govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
             sendEmailRequest.emailAddress, sendEmailRequest.personalisation,

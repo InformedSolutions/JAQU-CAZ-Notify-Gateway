@@ -7,6 +7,9 @@ import org.springframework.cloud.aws.messaging.core.QueueMessagingTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * AWS client builder configuration
+ */
 @Configuration
 public class SpringCloudAwsConfig {
 
