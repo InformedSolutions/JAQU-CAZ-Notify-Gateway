@@ -2,7 +2,6 @@ package uk.gov.caz.notify.messaging;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -83,7 +82,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress,
         personalisation, reference)).thenThrow(err);
 
-    messagingClient.consumeMessage(sendEmailRequest, headers);
+    messagingClient.handleMessage(sendEmailRequest, headers);
 
     Mockito.verify(govUkNotifyWrapper, times(1)).sendEmail(templateId,
         emailAddress, personalisation, reference);
@@ -103,7 +102,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress,
         personalisation, reference)).thenThrow(err);
 
-    messagingClient.consumeMessage(sendEmailRequest, headers);
+    messagingClient.handleMessage(sendEmailRequest, headers);
 
     Mockito.verify(govUkNotifyWrapper, times(1)).sendEmail(templateId,
         emailAddress, personalisation, reference);
@@ -123,7 +122,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress,
         personalisation, reference)).thenThrow(err);
 
-    messagingClient.consumeMessage(sendEmailRequest, headers);
+    messagingClient.handleMessage(sendEmailRequest, headers);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId,
         emailAddress, personalisation, reference);
@@ -143,7 +142,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress,
         personalisation, reference)).thenThrow(err);
 
-    messagingClient.consumeMessage(sendEmailRequest, headers);
+    messagingClient.handleMessage(sendEmailRequest, headers);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId,
         emailAddress, personalisation, reference);
@@ -163,7 +162,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress,
         personalisation, reference)).thenThrow(err);
 
-    messagingClient.consumeMessage(sendEmailRequest, headers);
+    messagingClient.handleMessage(sendEmailRequest, headers);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId,
         emailAddress, personalisation, reference);
@@ -183,7 +182,7 @@ public class MessagingClientTest {
         personalisation, reference)).thenThrow(err);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
 
-    messagingClient.consumeMessage(sendEmailRequest, headers);
+    messagingClient.handleMessage(sendEmailRequest, headers);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId,
         emailAddress, personalisation, reference);
@@ -205,7 +204,7 @@ public class MessagingClientTest {
         govUkNotifyWrapper.sendEmail(templateId, emailAddress, "{", reference))
         .thenThrow(err);
 
-    messagingClient.consumeMessage(sendEmailRequest, headers);
+    messagingClient.handleMessage(sendEmailRequest, headers);
 
     Mockito.verify(govUkNotifyWrapper, times(1)).sendEmail(templateId,
         emailAddress, "{", reference);

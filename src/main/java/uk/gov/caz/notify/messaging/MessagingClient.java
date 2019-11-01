@@ -17,6 +17,9 @@ import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
 import uk.gov.service.notify.NotificationClientException;
 
+/**
+ * A client to interface with remote queue service.
+ */
 @Component
 @Slf4j
 @ConditionalOnProperty(value = "application.consume", havingValue = "true",
@@ -51,18 +54,54 @@ public class MessagingClient {
   }
 
   /**
-   * A listener method to consume messages from the 'new' message queue.
+   * Helper method to strip out useful headers and add new headers should a
+   * message need to be sent to a new queue.
    * 
-   * @param sendEmailRequest the email message to be sent
+   * @param  oldHeaders the previous headers to be filtered
+   * @return            new headers
    */
-  @SqsListener(value = "${application.queue.new}",
-      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
-  public void consumeMessage(SendEmailRequest sendEmailRequest,
-      @Headers Map<String, Object> headers) {
-    log.debug("Received message: {}", sendEmailRequest.reference);
-    Map<String, Object> newHeaders = filterHeaders(headers);
+  private Map<String, Object> filterHeaders(Map<String, Object> oldHeaders) {
+    Map<String, Object> newHeaders = new HashMap<String, Object>();
 
-    // attempt to send email
+    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER,
+        oldHeaders.get("MessageGroupId"));
+    newHeaders.put(SqsMessageHeaders.SQS_DEDUPLICATION_ID_HEADER,
+        UUID.randomUUID().toString());
+
+    return newHeaders;
+  }
+
+  /**
+   * Helper method to retry sending the message.
+   * 
+   * @param  sendEmailRequest the key parameters of the email to be sent
+   * @param  i                the number of attempts to try
+   * @return                  true if message successfully sent, false otherwise
+   */
+  private boolean retryMessage(SendEmailRequest sendEmailRequest, int i) {
+    while (i > 0) {
+      try {
+        govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
+            sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
+            sendEmailRequest.reference);
+        return true;
+      } catch (NotificationClientException | IOException e) {
+        i = i - 1;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Handles the sending of the email and manages any errors thrown as a result
+   * of this process.
+   * 
+   * @param sendEmailRequest the body of the email request to be sent
+   * @param headers          the message headers received from SQS
+   */
+  public void handleMessage(SendEmailRequest sendEmailRequest,
+      Map<String, Object> headers) {
     try {
       govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
           sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
@@ -71,6 +110,8 @@ public class MessagingClient {
     } catch (NotificationClientException e) {
       int status = e.getHttpResult();
       log.error(e.getMessage());
+
+      Map<String, Object> newHeaders = filterHeaders(headers);
 
       boolean success;
 
@@ -120,40 +161,68 @@ public class MessagingClient {
       }
     } catch (IOException e) {
       log.error(e.getMessage());
+      Map<String, Object> newHeaders = filterHeaders(headers);
       publishMessage(dlq, sendEmailRequest, newHeaders);
     }
   }
 
-  private Map<String, Object> filterHeaders(Map<String, Object> oldHeaders) {
-    Map<String, Object> newHeaders = new HashMap<String, Object>();
-
-    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER,
-        oldHeaders.get("MessageGroupId"));
-    newHeaders.put(SqsMessageHeaders.SQS_DEDUPLICATION_ID_HEADER,
-        UUID.randomUUID().toString());
-
-    return newHeaders;
+  /**
+   * A listener method to consume messages from the 'new' message queue.
+   * 
+   * @param sendEmailRequest the email message to be sent
+   */
+  @SqsListener(value = "${application.queue.new}",
+      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
+  public void consumeNewMessage(SendEmailRequest sendEmailRequest,
+      @Headers Map<String, Object> headers) {
+    log.debug("Received message from new queue: {}",
+        sendEmailRequest.reference);
+    handleMessage(sendEmailRequest, headers);
   }
 
   /**
-   * Helper method to retry sending the message.
+   * A listener method to consume messages from the 'request limit' message
+   * queue.
    * 
-   * @param  sendEmailRequest the key parameters of the email to be sent
-   * @param  i                the number of attempts to try
-   * @return                  true if message successfully sent, false otherwise
+   * @param sendEmailRequest the email message to be sent
    */
-  private boolean retryMessage(SendEmailRequest sendEmailRequest, int i) {
-    while (i > 0) {
-      try {
-        govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
-            sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
-            sendEmailRequest.reference);
-        return true;
-      } catch (NotificationClientException | IOException e) {
-        i = i - 1;
-      }
-    }
+  @SqsListener(value = "${application.queue.request-limit}",
+      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
+  public void consumeRequestLimitMessage(SendEmailRequest sendEmailRequest,
+      @Headers Map<String, Object> headers) {
+    log.debug("Received message from request limit queue: {}",
+        sendEmailRequest.reference);
+    handleMessage(sendEmailRequest, headers);
+  }
 
-    return false;
+  /**
+   * A listener method to consume messages from the 'service down' message
+   * queue.
+   * 
+   * @param sendEmailRequest the email message to be sent
+   */
+  @SqsListener(value = "${application.queue.service-down}",
+      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
+  public void consumeServiceDownMessage(SendEmailRequest sendEmailRequest,
+      @Headers Map<String, Object> headers) {
+    log.debug("Received message from service down queue: {}",
+        sendEmailRequest.reference);
+    handleMessage(sendEmailRequest, headers);
+  }
+
+
+  /**
+   * A listener method to consume messages from the 'service error' message
+   * queue.
+   * 
+   * @param sendEmailRequest the email message to be sent
+   */
+  @SqsListener(value = "${application.queue.service-error}",
+      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
+  public void consumeServiceErrorMessage(SendEmailRequest sendEmailRequest,
+      @Headers Map<String, Object> headers) {
+    log.debug("Received message from service error queue: {}",
+        sendEmailRequest.reference);
+    handleMessage(sendEmailRequest, headers);
   }
 }
