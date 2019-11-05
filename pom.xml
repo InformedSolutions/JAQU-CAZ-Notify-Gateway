@@ -16,6 +16,7 @@
     <java.version>1.8</java.version>
 
     <artifactFinalName>${project.artifactId}-${project.version}</artifactFinalName>
+    <internal.libraries.version>1.5.2-SNAPSHOT</internal.libraries.version>
 
     <codeCoverage.minCoveredRatio>0.90</codeCoverage.minCoveredRatio>
     <codeCoverage.classMaxMissedCount>0</codeCoverage.classMaxMissedCount>
@@ -48,8 +49,22 @@
       <version>28.0-jre</version>
       <scope>compile</scope>
     </dependency>
-
+    
+    <!-- internal libraries : begin -->    
+	<dependency>
+		<groupId>uk.gov.caz</groupId>
+		<artifactId>aws-lambda-base</artifactId>
+		<version>${internal.libraries.version}</version>
+	</dependency>
+    <!-- internal libraries : end -->    
+    
     <!-- aws-related : begin -->
+    <dependency>
+	    <groupId>com.amazonaws</groupId>
+	    <artifactId>aws-lambda-java-events</artifactId>
+	    <version>2.2.7</version>
+	</dependency>
+
     <dependency>
       <groupId>com.amazonaws.serverless</groupId>
       <artifactId>aws-serverless-java-container-spring</artifactId>
