@@ -37,6 +37,7 @@ public class ManualDispatchController {
    *                                     Notify response
    * @throws NotificationClientException any error that may be thrown by Gov.UK
    *                                       Notify
+   * @throws InstantiationException      error thrown if API key is not set
    */
   @ApiOperation(value = "Manually dispatch an email",
       response = ResponseEntity.class)
@@ -49,11 +50,11 @@ public class ManualDispatchController {
   @GetMapping("/sendEmail")
   public ResponseEntity<SendEmailResponse> sendEmail(
       @RequestBody SendEmailRequest request)
-      throws NotificationClientException {
+      throws NotificationClientException, InstantiationException {
     try {
       SendEmailResponse sendEmailResponse =
-          govUkNotifyWrapper.sendEmail(request.templateId,
-              request.emailAddress, request.personalisation, request.reference);
+          govUkNotifyWrapper.sendEmail(request.templateId, request.emailAddress,
+              request.personalisation, request.reference);
       return ResponseEntity.ok(sendEmailResponse);
     } catch (IOException e) {
       return ResponseEntity.badRequest().build();

@@ -8,6 +8,7 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,7 +34,7 @@ public class GovUkNotifyWrapperTest {
 
   @BeforeEach
   void init() {
-    govUkNotifyWrapper = new GovUkNotifyWrapper(null);
+    govUkNotifyWrapper = new GovUkNotifyWrapper();
     ReflectionTestUtils.setField(govUkNotifyWrapper, "client", client);
     reference = UUID.randomUUID().toString();
     templateId = UUID.randomUUID().toString();
@@ -53,9 +54,11 @@ public class GovUkNotifyWrapperTest {
    * 
    * @throws NotificationClientException
    * @throws IOException
+   * @throws InstantiationException
    */
   @Test
-  public void canSendAnEmail() throws NotificationClientException, IOException {
+  public void canSendAnEmail()
+      throws NotificationClientException, IOException, InstantiationException {
     Mockito
         .when(client.sendEmail(Mockito.anyString(), Mockito.anyString(),
             Mockito.anyMap(), Mockito.anyString()))
@@ -69,7 +72,8 @@ public class GovUkNotifyWrapperTest {
   }
 
   @Test
-  public void ioErrorThrown() throws NotificationClientException {
+  public void ioErrorThrown()
+      throws NotificationClientException, InstantiationException {
     String personalisation = "{\"testJustKey\"}";
     try {
       govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation,
@@ -83,9 +87,11 @@ public class GovUkNotifyWrapperTest {
    * Bad request error test
    * 
    * @throws IOException
+   * @throws InstantiationException
    */
   @Test
-  public void throwsBadRequestError() throws IOException {
+  public void throwsBadRequestError()
+      throws IOException, InstantiationException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 400 + " " + null);
     try {
@@ -102,9 +108,10 @@ public class GovUkNotifyWrapperTest {
    * Authentication error test
    * 
    * @throws IOException
+   * @throws InstantiationException
    */
   @Test
-  public void throwsAuthError() throws IOException {
+  public void throwsAuthError() throws IOException, InstantiationException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 403 + " " + null);
     try {
@@ -121,9 +128,11 @@ public class GovUkNotifyWrapperTest {
    * Too Many Requests error test
    * 
    * @throws IOException
+   * @throws InstantiationException
    */
   @Test
-  public void throwsTooManyRequestsError() throws IOException {
+  public void throwsTooManyRequestsError()
+      throws IOException, InstantiationException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 429 + " " + null);
     try {
@@ -140,9 +149,11 @@ public class GovUkNotifyWrapperTest {
    * Internal Server Error test
    * 
    * @throws IOException
+   * @throws InstantiationException
    */
   @Test
-  public void throwsInternalServerError() throws IOException {
+  public void throwsInternalServerError()
+      throws IOException, InstantiationException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 500 + " " + null);
     try {
@@ -159,9 +170,11 @@ public class GovUkNotifyWrapperTest {
    * Service Unavailable error test
    * 
    * @throws IOException
+   * @throws InstantiationException
    */
   @Test
-  public void throwsServiceDownError() throws IOException {
+  public void throwsServiceDownError()
+      throws IOException, InstantiationException {
     NotificationClientException err =
         new NotificationClientException("Status code: " + 503 + " " + null);
     try {
