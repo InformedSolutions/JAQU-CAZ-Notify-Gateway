@@ -65,7 +65,7 @@ public class MessagingClient {
   public Map<String, Object> filterHeaders(Map<String, String> oldHeaders) {
     Map<String, Object> newHeaders = new HashMap<String, Object>();
 
-    String messageGroupId = oldHeaders.get("MessageGroupId").toString();
+    String messageGroupId = oldHeaders.get("MessageGroupId");
     newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER, messageGroupId);
     newHeaders.put(SqsMessageHeaders.SQS_DEDUPLICATION_ID_HEADER,
         UUID.randomUUID().toString());
@@ -110,10 +110,6 @@ public class MessagingClient {
    */
   public void handleMessage(SendEmailRequest sendEmailRequest,
       Map<String, Object> newHeaders) throws InstantiationException {
-    if (newHeaders.get("MessageGroupId") == null) {
-      throw new NoSuchElementException();
-    }
-
     try {
       govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
           sendEmailRequest.emailAddress, sendEmailRequest.personalisation,

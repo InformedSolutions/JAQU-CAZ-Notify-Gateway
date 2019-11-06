@@ -12,6 +12,7 @@ import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.aws.messaging.core.SqsMessageHeaders;
 import org.springframework.stereotype.Service;
 import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.messaging.MessagingClient;
@@ -44,19 +45,31 @@ public class MessageHandlingService {
     List<Message> messageList = this.getQueueMessageByQueueUrl(queueName);
 
     for (Message message : messageList) {
+      log.info("Received message: {}", message.toString());
+
       Map<String, Object> newHeaders =
           messagingClient.filterHeaders(message.getAttributes());
-      log.info("Received message: {}", message.toString());
-      try {
-        SendEmailRequest request =
-            objectMapper.readValue(message.getBody(), SendEmailRequest.class);
-        messagingClient.handleMessage(request, newHeaders);
-      } catch (IOException | NoSuchElementException
-          | InstantiationException err) {
+
+      if (newHeaders.get(SqsMessageHeaders.SQS_GROUP_ID_HEADER) == null) {
+        // this should never happen as FIFO queues won't allow the message group
+        // ID header to be empty
         log.error("Failed to process message with id: {}",
             message.getMessageId());
+        newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER,
+            "default-group-id");
         messagingClient.publishMessage(dlqName, message.getBody(), newHeaders);
-        continue;
+      } else {
+        try {
+          SendEmailRequest request =
+              objectMapper.readValue(message.getBody(), SendEmailRequest.class);
+          messagingClient.handleMessage(request, newHeaders);
+        } catch (IOException | InstantiationException err) {
+          log.error("Failed to process message with id: {}",
+              message.getMessageId());
+          messagingClient.publishMessage(dlqName, message.getBody(),
+              newHeaders);
+          continue;
+        }
       }
     }
   }

@@ -1,3 +1,4 @@
+
 package uk.gov.caz.notify.controller;
 
 import io.swagger.annotations.Api;
@@ -7,12 +8,14 @@ import io.swagger.annotations.ApiResponses;
 import java.io.IOException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import uk.gov.caz.notify.dto.MessageConsumerRequest;
 import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
+import uk.gov.caz.notify.service.MessageHandlingService;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
 
@@ -23,9 +26,12 @@ import uk.gov.service.notify.SendEmailResponse;
 public class ManualDispatchController {
 
   private final GovUkNotifyWrapper govUkNotifyWrapper;
+  private final MessageHandlingService messageHandlingService;
 
-  public ManualDispatchController(GovUkNotifyWrapper govUkNotifyWrapper) {
+  public ManualDispatchController(GovUkNotifyWrapper govUkNotifyWrapper,
+      MessageHandlingService messageHandlingService) {
     this.govUkNotifyWrapper = govUkNotifyWrapper;
+    this.messageHandlingService = messageHandlingService;
   }
 
   /**
@@ -47,7 +53,7 @@ public class ManualDispatchController {
       @ApiResponse(code = 429, message = "Rate limit exceeded"),
       @ApiResponse(code = 400, message = "Bad request"),
       @ApiResponse(code = 200, message = "Email sent"),})
-  @GetMapping("/sendEmail")
+  @PostMapping("/sendEmail")
   public ResponseEntity<SendEmailResponse> sendEmail(
       @RequestBody SendEmailRequest request)
       throws NotificationClientException, InstantiationException {
@@ -59,5 +65,22 @@ public class ManualDispatchController {
     } catch (IOException e) {
       return ResponseEntity.badRequest().build();
     }
+  }
+
+  /**
+   * A controller method to manually receive messages from a queue.
+   * 
+   * @param  request containing queue name
+   * @return
+   * @return         a response entity containing the Gov.UK Notify response
+   */
+  @ApiOperation(value = "Manually receive messages",
+      response = ResponseEntity.class)
+  @ApiResponses({@ApiResponse(code = 200, message = "Request successful"),})
+  @PostMapping("/receiveMessages")
+  public ResponseEntity<?> receiveMessages(
+      @RequestBody MessageConsumerRequest request) {
+    messageHandlingService.sendQueuedMessages(request.getQueueName());
+    return ResponseEntity.ok().build();
   }
 }
