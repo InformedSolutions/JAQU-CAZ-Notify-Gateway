@@ -58,10 +58,12 @@ class ManualDispatchControllerTest {
   }
 
   @Test
-  void canSendEmail() throws NotificationClientException, IOException {
-    Mockito.when(govUkNotifyWrapper.sendEmail(templateId,
-        sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
-        reference)).thenReturn(sendEmailResponse);
+  void canSendEmail()
+      throws NotificationClientException, IOException, InstantiationException {
+    Mockito.when(
+        govUkNotifyWrapper.sendEmail(templateId, sendEmailRequest.emailAddress,
+            sendEmailRequest.personalisation, reference))
+        .thenReturn(sendEmailResponse);
 
     ResponseEntity<SendEmailResponse> testResponse =
         manualDispatchController.sendEmail(sendEmailRequest);
@@ -69,10 +71,12 @@ class ManualDispatchControllerTest {
   }
 
   @Test
-  void canGetBadRequestError() throws NotificationClientException, IOException {
-    Mockito.when(govUkNotifyWrapper.sendEmail(templateId,
-        sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
-        reference)).thenThrow(new IOException());
+  void canGetBadRequestError()
+      throws NotificationClientException, IOException, InstantiationException {
+    Mockito.when(
+        govUkNotifyWrapper.sendEmail(templateId, sendEmailRequest.emailAddress,
+            sendEmailRequest.personalisation, reference))
+        .thenThrow(new IOException());
 
     ResponseEntity<SendEmailResponse> testResponse =
         manualDispatchController.sendEmail(sendEmailRequest);

@@ -1,12 +1,15 @@
 application:
   title: Notify Gateway
-  consume: true
-  queue:
-    new: notify-gateway_new_dev.fifo
-    dlq: notify-gateway_dlq_dev.fifo
-    request-limit: notify-gateway_request_limit_dev.fifo
-    service-down: notify-gateway_service_down_dev.fifo
-    service-error: notify-gateway_service_error_dev.fifo
+  message-batch-rate: 10
+  message-group-id-payments: PAYMENTS_RECEIPT
+
+job:
+  notify-gateway:
+    new-queue-url: notify-gateway_new_dev.fifo
+    request-limit-queue-url: notify-gateway_request_limit_dev.fifo
+    service-down-queue-url: notify-gateway_service_down_dev.fifo
+    service-error-queue-url: notify-gateway_service_error_dev.fifo
+    dlq-url: notify-gateway_dlq_dev.fifo
 
 springfox:
   documentation:
@@ -14,6 +17,5 @@ springfox:
       v2:
         path: /v1/swagger-docs
         
-# Note these are default values that will be overriden by aws secrets manager values 
-notify-api-key-dev:
-notify-api-key-team:
+# Note this is a default value that will be overridden by aws secrets manager values 
+notify-api-key: test

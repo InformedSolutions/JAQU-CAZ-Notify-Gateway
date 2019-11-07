@@ -6,12 +6,8 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cloud.aws.messaging.core.QueueMessagingTemplate;
 import org.springframework.cloud.aws.messaging.core.SqsMessageHeaders;
-import org.springframework.cloud.aws.messaging.listener.SqsMessageDeletionPolicy;
-import org.springframework.cloud.aws.messaging.listener.annotation.SqsListener;
-import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.stereotype.Component;
 import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
@@ -22,24 +18,22 @@ import uk.gov.service.notify.NotificationClientException;
  */
 @Component
 @Slf4j
-@ConditionalOnProperty(value = "application.consume", havingValue = "true",
-    matchIfMissing = false)
 public class MessagingClient {
 
   private final QueueMessagingTemplate messagingTemplate;
 
   private final GovUkNotifyWrapper govUkNotifyWrapper;
 
-  @Value("${application.queue.dlq}")
+  @Value("${job.notify-gateway.dlq-url}")
   String dlq;
 
-  @Value("${application.queue.request-limit}")
+  @Value("${job.notify-gateway.request-limit-queue-url}")
   String requestLimit;
 
-  @Value("${application.queue.service-down}")
+  @Value("${job.notify-gateway.service-down-queue-url}")
   String serviceDown;
 
-  @Value("${application.queue.service-error}")
+  @Value("${job.notify-gateway.service-error-queue-url}")
   String serviceError;
 
   public MessagingClient(GovUkNotifyWrapper govUkNotifyWrapper,
@@ -48,7 +42,14 @@ public class MessagingClient {
     this.messagingTemplate = messagingTemplate;
   }
 
-  private void publishMessage(String queueName, Object message,
+  /**
+   * A method to publish a message to a queue.
+   * 
+   * @param queueName the queue which the message should be sent to
+   * @param message   the message object
+   * @param headers   attributes that should be sent with the message
+   */
+  public void publishMessage(String queueName, Object message,
       Map<String, Object> headers) {
     messagingTemplate.convertAndSend(queueName, message, headers);
   }
@@ -60,11 +61,11 @@ public class MessagingClient {
    * @param  oldHeaders the previous headers to be filtered
    * @return            new headers
    */
-  private Map<String, Object> filterHeaders(Map<String, Object> oldHeaders) {
+  public Map<String, Object> filterHeaders(Map<String, String> oldHeaders) {
     Map<String, Object> newHeaders = new HashMap<String, Object>();
 
-    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER,
-        oldHeaders.get("MessageGroupId"));
+    String messageGroupId = oldHeaders.get("MessageGroupId");
+    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER, messageGroupId);
     newHeaders.put(SqsMessageHeaders.SQS_DEDUPLICATION_ID_HEADER,
         UUID.randomUUID().toString());
 
@@ -74,11 +75,14 @@ public class MessagingClient {
   /**
    * Helper method to retry sending the message.
    * 
-   * @param  sendEmailRequest the key parameters of the email to be sent
-   * @param  i                the number of attempts to try
-   * @return                  true if message successfully sent, false otherwise
+   * @param  sendEmailRequest       the key parameters of the email to be sent
+   * @param  i                      the number of attempts to try
+   * @return                        true if message successfully sent, false
+   *                                otherwise
+   * @throws InstantiationException thrown if the API key for Notify is not set
    */
-  private boolean retryMessage(SendEmailRequest sendEmailRequest, int i) {
+  private boolean retryMessage(SendEmailRequest sendEmailRequest, int i)
+      throws InstantiationException {
     while (i > 0) {
       log.debug("Retrying message with reference: {}",
           sendEmailRequest.reference);
@@ -99,11 +103,12 @@ public class MessagingClient {
    * Handles the sending of the email and manages any errors thrown as a result
    * of this process.
    * 
-   * @param sendEmailRequest the body of the email request to be sent
-   * @param headers          the message headers received from SQS
+   * @param  sendEmailRequest       the body of the email request to be sent
+   * @param  newHeaders             the message headers received from SQS
+   * @throws InstantiationException thrown if the API key for Notify is not set
    */
   public void handleMessage(SendEmailRequest sendEmailRequest,
-      Map<String, Object> headers) {
+      Map<String, Object> newHeaders) throws InstantiationException {
     try {
       govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
           sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
@@ -112,8 +117,6 @@ public class MessagingClient {
     } catch (NotificationClientException e) {
       int status = e.getHttpResult();
       log.error(e.getMessage());
-
-      Map<String, Object> newHeaders = filterHeaders(headers);
 
       boolean success;
 
@@ -163,68 +166,7 @@ public class MessagingClient {
       }
     } catch (IOException e) {
       log.error(e.getMessage());
-      Map<String, Object> newHeaders = filterHeaders(headers);
       publishMessage(dlq, sendEmailRequest, newHeaders);
     }
-  }
-
-  /**
-   * A listener method to consume messages from the 'new' message queue.
-   * 
-   * @param sendEmailRequest the email message to be sent
-   */
-  @SqsListener(value = "${application.queue.new}",
-      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
-  public void consumeNewMessage(SendEmailRequest sendEmailRequest,
-      @Headers Map<String, Object> headers) {
-    log.debug("Received message from new queue: {}",
-        sendEmailRequest.reference);
-    handleMessage(sendEmailRequest, headers);
-  }
-
-  /**
-   * A listener method to consume messages from the 'request limit' message
-   * queue.
-   * 
-   * @param sendEmailRequest the email message to be sent
-   */
-  @SqsListener(value = "${application.queue.request-limit}",
-      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
-  public void consumeRequestLimitMessage(SendEmailRequest sendEmailRequest,
-      @Headers Map<String, Object> headers) {
-    log.debug("Received message from request limit queue: {}",
-        sendEmailRequest.reference);
-    handleMessage(sendEmailRequest, headers);
-  }
-
-  /**
-   * A listener method to consume messages from the 'service down' message
-   * queue.
-   * 
-   * @param sendEmailRequest the email message to be sent
-   */
-  @SqsListener(value = "${application.queue.service-down}",
-      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
-  public void consumeServiceDownMessage(SendEmailRequest sendEmailRequest,
-      @Headers Map<String, Object> headers) {
-    log.debug("Received message from service down queue: {}",
-        sendEmailRequest.reference);
-    handleMessage(sendEmailRequest, headers);
-  }
-
-
-  /**
-   * A listener method to consume messages from the 'service error' message
-   * queue.
-   * 
-   * @param sendEmailRequest the email message to be sent
-   */
-  @SqsListener(value = "${application.queue.service-error}",
-      deletionPolicy = SqsMessageDeletionPolicy.ON_SUCCESS)
-  public void consumeServiceErrorMessage(SendEmailRequest sendEmailRequest,
-      @Headers Map<String, Object> headers) {
-    log.debug("Received message from service error queue: {}",
-        sendEmailRequest.reference);
-    handleMessage(sendEmailRequest, headers);
   }
 }

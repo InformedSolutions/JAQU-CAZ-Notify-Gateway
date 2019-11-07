@@ -1,10 +1,12 @@
 package uk.gov.caz.notify.messaging;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -74,7 +76,7 @@ public class MessagingClientTest {
 
   @Test
   void canSendBadRequestErrorToDlq()
-      throws NotificationClientException, IOException {
+      throws NotificationClientException, IOException, InstantiationException {
 
     Mockito.when(err.getHttpResult()).thenReturn(400);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
@@ -94,7 +96,7 @@ public class MessagingClientTest {
 
   @Test
   void canSendAuthorizationErrorToDlq()
-      throws NotificationClientException, IOException {
+      throws NotificationClientException, IOException, InstantiationException {
 
     Mockito.when(err.getHttpResult()).thenReturn(403);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
@@ -114,7 +116,7 @@ public class MessagingClientTest {
 
   @Test
   void canSendRequestLimitErrorToRequestLimitQueue()
-      throws NotificationClientException, IOException {
+      throws NotificationClientException, IOException, InstantiationException {
 
     Mockito.when(err.getHttpResult()).thenReturn(429);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
@@ -134,7 +136,7 @@ public class MessagingClientTest {
 
   @Test
   void canSendServiceErrorToServiceErrorQueue()
-      throws NotificationClientException, IOException {
+      throws NotificationClientException, IOException, InstantiationException {
 
     Mockito.when(err.getHttpResult()).thenReturn(500);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
@@ -154,7 +156,7 @@ public class MessagingClientTest {
 
   @Test
   void canSendServiceDownToServiceDownQueue()
-      throws NotificationClientException, IOException {
+      throws NotificationClientException, IOException, InstantiationException {
 
     Mockito.when(err.getHttpResult()).thenReturn(503);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
@@ -174,7 +176,7 @@ public class MessagingClientTest {
 
   @Test
   void canSendUnexpectedErrorToDlq()
-      throws NotificationClientException, IOException {
+      throws NotificationClientException, IOException, InstantiationException {
 
     Mockito.when(err.getHttpResult()).thenReturn(418);
 
@@ -194,7 +196,7 @@ public class MessagingClientTest {
 
   @Test
   void canSendBadlyFormedParametersToDlq()
-      throws NotificationClientException, IOException {
+      throws NotificationClientException, IOException, InstantiationException {
 
     this.sendEmailRequest.personalisation = "{";
     IOException err = mock(IOException.class);
