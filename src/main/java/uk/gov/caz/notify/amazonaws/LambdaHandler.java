@@ -41,9 +41,10 @@ public class LambdaHandler implements RequestStreamHandler {
       log.info("Deserializing input object");
       MessageConsumerRequest request =
           obj.readValue(input, MessageConsumerRequest.class);
+      log.info("Processing messages from the {} queue", request.getQueueName());
       messageHandlingService.sendQueuedMessages(request.getQueueName());
     } catch (JsonMappingException jme) {
-      log.error("Failed to deserialize input object");
+      log.error("Failed to deserialize input object: {}", input.toString());
       log.error(jme.getMessage());
     }
 

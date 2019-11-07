@@ -1,4 +1,3 @@
-
 package uk.gov.caz.notify.controller;
 
 import io.swagger.annotations.Api;
