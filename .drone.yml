@@ -145,6 +145,7 @@ steps:
         from_secret: aws_secret_access_key
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
+      TF_VAR_notify-api-key: development-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-d6863a5d-b78c-4352-940f-c95594e59ee1
     when:
       event:
         - push
@@ -169,9 +170,195 @@ steps:
       event:
         - push
 
-
   ################################################# End DEV Steps #######################################################
+---
 
+################################################### SIT Steps ########################################################
+
+kind: pipeline
+type: docker
+name: notification-gateway-sit
+
+trigger:
+  branch:
+    - release/*
+  event:
+    - pull_request
+    - push
+concurrency:
+  limit: 1
+
+volumes:
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
+
+  - name: package_directory
+    temp: {}
+
+  - name: m2_repo
+    temp: {}
+
+
+steps:
+
+  # Clean agent images and containers to prevent disk space overuse
+  - name: clean agent
+    image: docker
+    commands:
+      - docker system prune -f
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Build docker images
+  - name: build docker maven base
+    image: docker
+    commands:
+      - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Unit test
+  - name: unit test
+    image: notification-gateway-api-base
+    pull: never
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    commands:
+      - mvn test -P jacoco --no-transfer-progress
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: nexus_password
+
+
+  # Package
+  - name: package
+    image: notification-gateway-api-base
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: nexus_password
+      BUILD_ID: ${DRONE_BUILD_NUMBER}
+    pull: never
+    commands:
+      - mvn package -DskipUnitTests
+
+  - name: plan updates in sit
+    image: hashicorp/terraform:0.12.3
+    volumes:
+      - name: package_directory
+        path: /opt/package
+    commands:
+      - apk update && apk add bash
+      - mkdir ~/.ssh
+      - echo -n "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - touch ~/.ssh/known_hosts
+      - chmod 600 ~/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
+      - cd JAQU-CAZ-IAC
+      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
+      - cd terraform/projects/notify-gateway/layers/api
+      - PATH=$PATH:../../../../bin/
+      - chmod +x ../../../../bin/tf
+      - tf init
+      - tf workspace select sit || tf workspace new sit
+      - tf plan
+    environment:
+      TF_VAR_access_key:
+        from_secret: aws_access_key_id
+      TF_VAR_secret_key:
+        from_secret: aws_secret_access_key
+      GIT_PRIVATE_SSH:
+        from_secret: github_private_key
+      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
+    when:
+      event:
+        - pull_request
+
+  - name: provisioning warning
+    image: docker:git
+    commands:
+      - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
+    when:
+      status:
+        - failure
+
+  # Invoke terraform scripts to deploy lambda function
+  - name: deploy to sit
+    image: hashicorp/terraform:0.12.3
+    volumes:
+      - name: package_directory
+        path: /opt/package
+    commands:
+      - apk update && apk add bash
+      - mkdir ~/.ssh
+      - echo -n "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - touch ~/.ssh/known_hosts
+      - chmod 600 ~/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
+      - cd JAQU-CAZ-IAC
+      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
+      - cd terraform/projects/notify-gateway/layers/api
+      - PATH=$PATH:../../../../bin/
+      - chmod +x ../../../../bin/tf
+      - tf init
+      - tf workspace select sit || tf workspace new sit
+      - tf apply -auto-approve
+    environment:
+      TF_VAR_access_key:
+        from_secret: aws_access_key_id
+      TF_VAR_secret_key:
+        from_secret: aws_secret_access_key
+      GIT_PRIVATE_SSH:
+        from_secret: github_private_key
+      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
+    when:
+      event:
+        - push
+
+  - name: codedeploy api sit
+    image: alpine:latest
+    commands:
+      - apk add --update bash python python-dev py-pip build-base jq
+      - pip install awscli
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh .
+      - bash deploy_lambda.sh
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
+      AWS_DEFAULT_REGION: eu-west-2
+      PROJECT: notify-gateway
+      DEPLOY_ENVIRONMENT: sit
+      LAMBDA_BUCKET: jaqu-projects-lambda-bucket
+    when:
+      event:
+        - push
+
+
+  ################################################# End SIT Steps #######################################################
 
 
 
