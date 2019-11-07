@@ -18,7 +18,7 @@ import uk.gov.caz.notify.dto.MessageConsumerRequest;
 import uk.gov.caz.notify.service.MessageHandlingService;
 
 @Slf4j
-public class LambdaHandler implements RequestStreamHandler {
+public class StreamLambdaHandler implements RequestStreamHandler {
 
   private static SpringBootLambdaContainerHandler<AwsProxyRequest, AwsProxyResponse> handler;
 
