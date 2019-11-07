@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +30,8 @@ public class MessageHandlingService {
 
   @Value("${job.notify-gateway.dlq-url}")
   private String dlqName;
+
+  private String queueUrl;
 
   /**
    * Fetch messages from a queue and process each message. Send the message to
@@ -68,9 +69,9 @@ public class MessageHandlingService {
               message.getMessageId());
           messagingClient.publishMessage(dlqName, message.getBody(),
               newHeaders);
-          continue;
         }
       }
+      amazonSqs.deleteMessage(this.queueUrl, message.getReceiptHandle());
     }
   }
 
@@ -78,10 +79,12 @@ public class MessageHandlingService {
     log.info("Getting messages from queue url: {}", queueName);
 
     GetQueueUrlResult getQueueUrlResult = amazonSqs.getQueueUrl(queueName);
-    String queueUrl = getQueueUrlResult.getQueueUrl();
+    this.queueUrl = getQueueUrlResult.getQueueUrl();
 
-    ReceiveMessageRequest messageRequest = new ReceiveMessageRequest(queueUrl)
-        .withWaitTimeSeconds(5).withMaxNumberOfMessages(messageBatchRate);
+    ReceiveMessageRequest messageRequest =
+        new ReceiveMessageRequest(this.queueUrl).withWaitTimeSeconds(5)
+            .withMaxNumberOfMessages(messageBatchRate)
+            .withAttributeNames("MessageGroupId");
 
     List<Message> messages =
         amazonSqs.receiveMessage(messageRequest).getMessages();

@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cloud.aws.messaging.core.SqsMessageHeaders;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.GetQueueUrlResult;
 import com.amazonaws.services.sqs.model.Message;
@@ -51,8 +52,12 @@ public class MessageHandlingServiceTest {
     SendEmailRequest ser = new SendEmailRequest("testTemplate", "testEmail",
         "testPersonalisation", "testReference");
     String msgBody = objectMapper.writeValueAsString(ser);
+
     Map<String, String> headers = new HashMap<String, String>();
     headers.put("MessageGroupId", "testId");
+
+    Map<String, Object> newHeaders = new HashMap<String, Object>();
+    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER, "testId");
 
     Message msg1 = new Message();
     msg1.setBody(msgBody);
@@ -77,6 +82,7 @@ public class MessageHandlingServiceTest {
             amazonSqs.receiveMessage(Mockito.any(ReceiveMessageRequest.class)))
         .thenReturn(rmr);
     Mockito.when(amazonSqs.getQueueUrl("test")).thenReturn(getQueueUrlResult);
+    Mockito.when(messagingClient.filterHeaders(headers)).thenReturn(newHeaders);
 
     messageHandlingService.sendQueuedMessages("test");
 

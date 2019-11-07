@@ -71,7 +71,6 @@ public class ManualDispatchController {
    * A controller method to manually receive messages from a queue.
    * 
    * @param  request containing queue name
-   * @return
    * @return         a response entity containing the Gov.UK Notify response
    */
   @ApiOperation(value = "Manually receive messages",

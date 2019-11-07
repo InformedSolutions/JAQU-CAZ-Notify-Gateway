@@ -216,11 +216,4 @@ public class MessagingClientTest {
 
   }
 
-  @Test
-  void canSendMessageWithoutGroupMessageIdHeaderToDlq()
-      throws NotificationClientException, IOException {
-    assertThrows(NoSuchElementException.class, () -> messagingClient
-        .handleMessage(sendEmailRequest, new HashMap<String, Object>()));
-  }
-
 }
