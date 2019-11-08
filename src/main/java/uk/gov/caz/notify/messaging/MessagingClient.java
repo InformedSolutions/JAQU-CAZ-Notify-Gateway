@@ -114,6 +114,7 @@ public class MessagingClient {
   public void handleMessage(SendEmailRequest sendEmailRequest,
       Map<String, Object> newHeaders) throws InstantiationException {
     try {
+      log.info("Sending email with reference {}", sendEmailRequest.reference);
       govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId,
           sendEmailRequest.emailAddress, sendEmailRequest.personalisation,
           sendEmailRequest.reference);

@@ -46,7 +46,7 @@ public class MessageHandlingService {
     List<Message> messageList = this.getQueueMessageByQueueUrl(queueName);
 
     for (Message message : messageList) {
-      log.info("Received message: {}", message.toString());
+      log.info("Processing message with ID: {}", message.getMessageId());
 
       Map<String, Object> newHeaders =
           messagingClient.filterHeaders(message.getAttributes());
@@ -76,9 +76,10 @@ public class MessageHandlingService {
   }
 
   private List<Message> getQueueMessageByQueueUrl(String queueName) {
-    log.info("Getting messages from queue url: {}", queueName);
 
     String envQueueName = messagingClient.getEnvQueueName(queueName);
+    log.info("Getting messages from queue url: {}", envQueueName);
+
     GetQueueUrlResult getQueueUrlResult = amazonSqs.getQueueUrl(envQueueName);
     this.queueUrl = getQueueUrlResult.getQueueUrl();
 
