@@ -81,6 +81,7 @@ public class MessageHandlingServiceTest {
         .when(
             amazonSqs.receiveMessage(Mockito.any(ReceiveMessageRequest.class)))
         .thenReturn(rmr);
+    Mockito.when(messagingClient.getEnvQueueName("test")).thenReturn("test");
     Mockito.when(amazonSqs.getQueueUrl("test")).thenReturn(getQueueUrlResult);
     Mockito.when(messagingClient.filterHeaders(headers)).thenReturn(newHeaders);
 

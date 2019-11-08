@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.aws.messaging.core.QueueMessagingTemplate;
 import org.springframework.cloud.aws.messaging.core.SqsMessageHeaders;
 import org.springframework.stereotype.Component;
+import uk.gov.caz.notify.domain.QueueName;
 import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
 import uk.gov.service.notify.NotificationClientException;
@@ -24,17 +25,20 @@ public class MessagingClient {
 
   private final GovUkNotifyWrapper govUkNotifyWrapper;
 
+  @Value("${job.notify-gateway.new-queue-url}")
+  String newQueue;
+
   @Value("${job.notify-gateway.dlq-url}")
   String dlq;
 
   @Value("${job.notify-gateway.request-limit-queue-url}")
-  String requestLimit;
+  String requestLimitQueue;
 
   @Value("${job.notify-gateway.service-down-queue-url}")
-  String serviceDown;
+  String serviceDownQueue;
 
   @Value("${job.notify-gateway.service-error-queue-url}")
-  String serviceError;
+  String serviceErrorQueue;
 
   public MessagingClient(GovUkNotifyWrapper govUkNotifyWrapper,
       QueueMessagingTemplate messagingTemplate) {
@@ -133,7 +137,7 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(requestLimit, sendEmailRequest, newHeaders);
+            publishMessage(requestLimitQueue, sendEmailRequest, newHeaders);
           }
           break;
         case 500:
@@ -142,7 +146,7 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(serviceError, sendEmailRequest, newHeaders);
+            publishMessage(serviceErrorQueue, sendEmailRequest, newHeaders);
           }
           break;
         case 503:
@@ -151,7 +155,7 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(serviceDown, sendEmailRequest, newHeaders);
+            publishMessage(serviceDownQueue, sendEmailRequest, newHeaders);
           }
           break;
         default:
@@ -167,6 +171,27 @@ public class MessagingClient {
     } catch (IOException e) {
       log.error(e.getMessage());
       publishMessage(dlq, sendEmailRequest, newHeaders);
+    }
+  }
+
+  /**
+   * Helper method to return a full queue name (with consideration for
+   * environment) from the generic name of a queue.
+   * 
+   * @param  queueName generic name of the queue
+   * @return           full name of queue target
+   */
+  public String getEnvQueueName(String queueName) {
+    if (queueName.equals(QueueName.NEW.toString())) {
+      return this.newQueue;
+    } else if (queueName.equals(QueueName.REQUEST_LIMIT.toString())) {
+      return this.requestLimitQueue;
+    } else if (queueName.equals(QueueName.SERVICE_ERROR.toString())) {
+      return this.serviceErrorQueue;
+    } else if (queueName.equals(QueueName.SERVICE_DOWN.toString())) {
+      return this.serviceDownQueue;
+    } else {
+      throw new IllegalArgumentException("Queue name not recognised.");
     }
   }
 }
