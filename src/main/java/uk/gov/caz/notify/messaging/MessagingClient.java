@@ -29,7 +29,7 @@ public class MessagingClient {
   String newQueue;
 
   @Value("${job.notify-gateway.dlq-url}")
-  String dlq;
+  String deadLetterQueue;
 
   @Value("${job.notify-gateway.request-limit-queue-url}")
   String requestLimitQueue;
@@ -126,10 +126,10 @@ public class MessagingClient {
 
       switch (status) {
         case 400:
-          publishMessage(dlq, sendEmailRequest, newHeaders);
+          publishMessage(deadLetterQueue, sendEmailRequest, newHeaders);
           break;
         case 403:
-          publishMessage(dlq, sendEmailRequest, newHeaders);
+          publishMessage(deadLetterQueue, sendEmailRequest, newHeaders);
           break;
         case 429:
           success = retryMessage(sendEmailRequest, 3);
@@ -164,13 +164,13 @@ public class MessagingClient {
             log.debug("Message successfully sent: {}",
                 sendEmailRequest.reference);
           } else {
-            publishMessage(dlq, sendEmailRequest, newHeaders);
+            publishMessage(deadLetterQueue, sendEmailRequest, newHeaders);
           }
           break;
       }
     } catch (IOException e) {
       log.error(e.getMessage());
-      publishMessage(dlq, sendEmailRequest, newHeaders);
+      publishMessage(deadLetterQueue, sendEmailRequest, newHeaders);
     }
   }
 
