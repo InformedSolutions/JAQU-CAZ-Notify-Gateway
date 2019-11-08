@@ -78,7 +78,8 @@ public class MessageHandlingService {
   private List<Message> getQueueMessageByQueueUrl(String queueName) {
     log.info("Getting messages from queue url: {}", queueName);
 
-    GetQueueUrlResult getQueueUrlResult = amazonSqs.getQueueUrl(queueName);
+    String envQueueName = messagingClient.getEnvQueueName(queueName);
+    GetQueueUrlResult getQueueUrlResult = amazonSqs.getQueueUrl(envQueueName);
     this.queueUrl = getQueueUrlResult.getQueueUrl();
 
     ReceiveMessageRequest messageRequest =

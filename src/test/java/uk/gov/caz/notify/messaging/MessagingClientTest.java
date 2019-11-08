@@ -66,11 +66,12 @@ public class MessagingClientTest {
     headers = new HashMap<String, Object>();
     headers.put("MessageGroupId", "test");
 
-    ReflectionTestUtils.setField(messagingClient, "dlq", "dlq");
-    ReflectionTestUtils.setField(messagingClient, "requestLimit",
+    ReflectionTestUtils.setField(messagingClient, "deadLetterQueue", "dlq");
+    ReflectionTestUtils.setField(messagingClient, "requestLimitQueue",
         "requestLimit");
-    ReflectionTestUtils.setField(messagingClient, "serviceDown", "serviceDown");
-    ReflectionTestUtils.setField(messagingClient, "serviceError",
+    ReflectionTestUtils.setField(messagingClient, "serviceDownQueue",
+        "serviceDown");
+    ReflectionTestUtils.setField(messagingClient, "serviceErrorQueue",
         "serviceError");
   }
 
