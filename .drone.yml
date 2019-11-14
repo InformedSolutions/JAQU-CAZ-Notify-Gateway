@@ -381,14 +381,7 @@ concurrency:
   limit: 1
 
 volumes:
-  - name: docker_sock
-    host:
-      path: /var/run/docker.sock
-
   - name: package_directory
-    temp: {}
-
-  - name: m2_repo
     temp: {}
 
 
@@ -430,9 +423,16 @@ steps:
         from_secret: aws_access_key_id
       TF_VAR_secret_key:
         from_secret: aws_secret_access_key
+      TF_VAR_account_id:
+        from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
       TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
+      AWS_DEFAULT_REGION: eu-west-2
     when:
       event:
         - pull_request
@@ -481,9 +481,16 @@ steps:
         from_secret: aws_access_key_id
       TF_VAR_secret_key:
         from_secret: aws_secret_access_key
+      TF_VAR_account_id:
+        from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
       TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
+      AWS_DEFAULT_REGION: eu-west-2
     when:
       event:
         - push
@@ -545,16 +552,8 @@ concurrency:
   limit: 1
 
 volumes:
-  - name: docker_sock
-    host:
-      path: /var/run/docker.sock
-
   - name: package_directory
     temp: {}
-
-  - name: m2_repo
-    temp: {}
-
 
 steps:
 
@@ -594,9 +593,16 @@ steps:
         from_secret: aws_access_key_id
       TF_VAR_secret_key:
         from_secret: aws_secret_access_key
+      TF_VAR_account_id:
+        from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
       TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
+      AWS_DEFAULT_REGION: eu-west-2
     when:
       event:
         - pull_request
@@ -645,9 +651,16 @@ steps:
         from_secret: aws_access_key_id
       TF_VAR_secret_key:
         from_secret: aws_secret_access_key
+      TF_VAR_account_id:
+        from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
       TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
+      AWS_DEFAULT_REGION: eu-west-2
     when:
       event:
         - push
