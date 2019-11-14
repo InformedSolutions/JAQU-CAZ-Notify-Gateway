@@ -408,9 +408,15 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-sit
+      - ENV=sit
+      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
+      - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout staging
+      - git checkout preprod
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
       - cd terraform/projects/notify-gateway/layers/api
       - PATH=$PATH:../../../../bin/
@@ -452,9 +458,15 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-sit
+      - ENV=sit
+      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
+      - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout staging
+      - git checkout preprod
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
       - cd terraform/projects/notify-gateway/layers/api
       - PATH=$PATH:../../../../bin/
@@ -558,6 +570,12 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-preprod
+      - ENV=preprod
+      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
+      - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
       - git checkout master
@@ -602,6 +620,12 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-preprod
+      - ENV=preprod
+      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
+      - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
       - git checkout master
