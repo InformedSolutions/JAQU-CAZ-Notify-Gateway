@@ -401,7 +401,8 @@ steps:
       - name: package_directory
         path: /opt/package
     commands:
-      - apk update && apk add bash
+      - apk add --update bash python python-dev py-pip build-base jq wget
+      - pip install awscli
       - mkdir ~/.ssh
       - echo -n "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
       - chmod 600 ~/.ssh/id_rsa
@@ -451,7 +452,8 @@ steps:
       - name: package_directory
         path: /opt/package
     commands:
-      - apk update && apk add bash
+      - apk add --update bash python python-dev py-pip build-base jq wget
+      - pip install awscli
       - mkdir ~/.ssh
       - echo -n "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
       - chmod 600 ~/.ssh/id_rsa
@@ -563,7 +565,8 @@ steps:
       - name: package_directory
         path: /opt/package
     commands:
-      - apk update && apk add bash
+      - apk add --update bash python python-dev py-pip build-base jq wget
+      - pip install awscli
       - mkdir ~/.ssh
       - echo -n "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
       - chmod 600 ~/.ssh/id_rsa
@@ -613,7 +616,8 @@ steps:
       - name: package_directory
         path: /opt/package
     commands:
-      - apk update && apk add bash
+      - apk add --update bash python python-dev py-pip build-base jq wget
+      - pip install awscli
       - mkdir ~/.ssh
       - echo -n "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
       - chmod 600 ~/.ssh/id_rsa
