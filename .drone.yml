@@ -145,7 +145,6 @@ steps:
         from_secret: aws_secret_access_key
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
-      TF_VAR_notify-api-key: development-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-d6863a5d-b78c-4352-940f-c95594e59ee1
     when:
       event:
         - push
@@ -291,7 +290,6 @@ steps:
         from_secret: aws_secret_access_key
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
-      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
     when:
       event:
         - pull_request
@@ -335,7 +333,6 @@ steps:
         from_secret: aws_secret_access_key
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
-      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
     when:
       event:
         - push
@@ -427,7 +424,6 @@ steps:
         from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
-      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
       AWS_ACCESS_KEY_ID:
         from_secret: aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
@@ -485,7 +481,6 @@ steps:
         from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
-      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
       AWS_ACCESS_KEY_ID:
         from_secret: aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
@@ -597,7 +592,6 @@ steps:
         from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
-      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
       AWS_ACCESS_KEY_ID:
         from_secret: aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
@@ -655,7 +649,6 @@ steps:
         from_secret: aws_account_id
       GIT_PRIVATE_SSH:
         from_secret: github_private_key
-      TF_VAR_notify-api-key: team-b3bce754-9ce0-4bda-a9ca-c713f80fcea3-9aba46e8-67a8-4cfd-96ad-ea4f2eb2b969
       AWS_ACCESS_KEY_ID:
         from_secret: aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
