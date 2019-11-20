@@ -45,26 +45,24 @@ public class MessageHandlingServiceTest {
   }
 
   @Test
-  void canReceiveMessages()
-      throws JsonProcessingException, InstantiationException {
+  void canReceiveMessages() throws JsonProcessingException, InstantiationException {
 
     // set up messages
-    SendEmailRequest ser = new SendEmailRequest("testTemplate", "testEmail",
-        "testPersonalisation", "testReference");
+    SendEmailRequest ser =
+        new SendEmailRequest("testTemplate", "testEmail", "testPersonalisation", "testReference");
     String msgBody = objectMapper.writeValueAsString(ser);
 
     Map<String, String> headers = new HashMap<String, String>();
-    headers.put("MessageGroupId", "testId");
-
-    Map<String, Object> newHeaders = new HashMap<String, Object>();
-    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER, "testId");
+    headers.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER, "testId");
 
     Message msg1 = new Message();
     msg1.setBody(msgBody);
+    msg1.setReceiptHandle("testHandle");
     msg1.setAttributes(headers);
 
     Message msg2 = new Message();
-    msg2.setBody(msgBody);
+    msg2.setBody("");
+    msg2.setReceiptHandle("testHandle");
     msg2.setAttributes(headers);
 
     List<Message> msgList = new ArrayList<Message>();
@@ -77,21 +75,19 @@ public class MessageHandlingServiceTest {
     ReceiveMessageResult rmr = new ReceiveMessageResult();
     rmr.setMessages(msgList);
 
-    Mockito
-        .when(
-            amazonSqs.receiveMessage(Mockito.any(ReceiveMessageRequest.class)))
+    Mockito.when(amazonSqs.receiveMessage(Mockito.any(ReceiveMessageRequest.class)))
         .thenReturn(rmr);
     Mockito.when(messagingClient.getEnvQueueName("test")).thenReturn("test");
     Mockito.when(amazonSqs.getQueueUrl("test")).thenReturn(getQueueUrlResult);
-    Mockito.when(messagingClient.filterHeaders(headers)).thenReturn(newHeaders);
 
     messageHandlingService.sendQueuedMessages("test");
 
     // assertions
-    Mockito.verify(amazonSqs, times(1))
-        .receiveMessage(Mockito.any(ReceiveMessageRequest.class));
-    Mockito.verify(messagingClient, times(2))
-        .handleMessage(Mockito.any(SendEmailRequest.class), Mockito.anyMap());
+    Mockito.verify(amazonSqs, times(1)).receiveMessage(Mockito.any(ReceiveMessageRequest.class));
+    Mockito.verify(amazonSqs, times(2)).deleteMessage("testUrl", "testHandle");
+    Mockito.verify(messagingClient, times(1)).publishMessage(null, "", "testId");
+    Mockito.verify(messagingClient, times(1)).handleMessage(Mockito.any(SendEmailRequest.class),
+        Mockito.anyString());
 
   }
 

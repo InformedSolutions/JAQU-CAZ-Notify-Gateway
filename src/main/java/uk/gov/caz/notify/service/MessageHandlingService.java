@@ -34,9 +34,8 @@ public class MessageHandlingService {
   private String queueUrl;
 
   /**
-   * Fetch messages from a queue and process each message. Send the message to
-   * the DLQ if the message body can't be deserialized or if the MessageGroupId
-   * header is missing.
+   * Fetch messages from a queue and process each message. Send the message to the DLQ if the
+   * message body can't be deserialized or if the MessageGroupId header is missing.
    * 
    * @param queueName the name of the queue to receive messages from
    */
@@ -48,28 +47,21 @@ public class MessageHandlingService {
     for (Message message : messageList) {
       log.info("Processing message with ID: {}", message.getMessageId());
 
-      Map<String, Object> newHeaders =
-          messagingClient.filterHeaders(message.getAttributes());
+      Map<String, String> msgAttributes = message.getAttributes();
+      String msgGroupId = msgAttributes.get(SqsMessageHeaders.SQS_GROUP_ID_HEADER);
 
-      if (newHeaders.get(SqsMessageHeaders.SQS_GROUP_ID_HEADER) == null) {
-        // this should never happen as FIFO queues won't allow the message group
-        // ID header to be empty
-        log.error("Failed to process message with id: {}",
-            message.getMessageId());
-        newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER,
-            "default-group-id");
-        messagingClient.publishMessage(dlqName, message.getBody(), newHeaders);
-      } else {
-        try {
-          SendEmailRequest request =
-              objectMapper.readValue(message.getBody(), SendEmailRequest.class);
-          messagingClient.handleMessage(request, newHeaders);
-        } catch (IOException | InstantiationException err) {
-          log.error("Failed to process message with id: {}",
-              message.getMessageId());
-          messagingClient.publishMessage(dlqName, message.getBody(),
-              newHeaders);
-        }
+      if (msgGroupId == null) {
+        log.warn("No Message Group ID given for message with ID: {}", message.getMessageId());
+        msgGroupId = "default-group-id";
+      }
+
+      try {
+        SendEmailRequest request =
+            objectMapper.readValue(message.getBody(), SendEmailRequest.class);
+        messagingClient.handleMessage(request, msgGroupId);
+      } catch (IOException | InstantiationException e) {
+        log.error("Failed to process message with id: {}", message.getMessageId());
+        messagingClient.publishMessage(dlqName, message.getBody(), msgGroupId);
       }
       amazonSqs.deleteMessage(this.queueUrl, message.getReceiptHandle());
     }
@@ -85,11 +77,9 @@ public class MessageHandlingService {
 
     ReceiveMessageRequest messageRequest =
         new ReceiveMessageRequest(this.queueUrl).withWaitTimeSeconds(5)
-            .withMaxNumberOfMessages(messageBatchRate)
-            .withAttributeNames("MessageGroupId");
+            .withMaxNumberOfMessages(messageBatchRate).withAttributeNames("MessageGroupId");
 
-    List<Message> messages =
-        amazonSqs.receiveMessage(messageRequest).getMessages();
+    List<Message> messages = amazonSqs.receiveMessage(messageRequest).getMessages();
 
     log.info("Received total messages size: {}", messages.size());
 
