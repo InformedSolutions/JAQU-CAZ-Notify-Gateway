@@ -5,7 +5,7 @@ spring:
 aws:
   secretsmanager:
     prefix: /config
-    defaultContext: notify.dev
+    defaultContext: notify
     profileSeparator: .
     failFast: true
     enabled: true
