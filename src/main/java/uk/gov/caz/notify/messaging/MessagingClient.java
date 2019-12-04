@@ -62,13 +62,12 @@ public class MessagingClient {
    * 
    * @param queueName the queue which the message should be sent to
    * @param message the message object
-   * @param messageGroupId an identifier to distinguish payment receipts in a queue
    */
-  public void publishMessage(String queueName, String message, String messageGroupId) {
+  public void publishMessage(String queueName, String message) {
     SendMessageRequest sendMessageRequest = new SendMessageRequest();
     UUID messageDeduplicationId = UUID.randomUUID();
 
-    sendMessageRequest.setMessageGroupId(messageGroupId);
+    sendMessageRequest.setMessageGroupId(UUID.randomUUID().toString());
     sendMessageRequest.setMessageDeduplicationId(messageDeduplicationId.toString());
     sendMessageRequest.putCustomRequestHeader("contentType", "application/json");
     sendMessageRequest.setQueueUrl(client.getQueueUrl(queueName).getQueueUrl());
@@ -129,11 +128,10 @@ public class MessagingClient {
    * Handles the sending of the email and manages any errors thrown as a result of this process.
    * 
    * @param sendEmailRequest the body of the email request to be sent
-   * @param messageGroupId the message headers received from SQS
    * @throws JsonProcessingException thrown if the request cannot be written to a string
    * @throws InstantiationException thrown if the API key for Notify is not set
    */
-  public void handleMessage(SendEmailRequest sendEmailRequest, String messageGroupId)
+  public void handleMessage(SendEmailRequest sendEmailRequest)
       throws JsonProcessingException, InstantiationException {
     String msgBody = objectMapper.writeValueAsString(sendEmailRequest);
     try {
@@ -153,12 +151,12 @@ public class MessagingClient {
         case 400:
           log.info("Publishing message with reference {} to the dead letter queue",
               sendEmailRequest.reference);
-          publishMessage(deadLetterQueue, msgBody, messageGroupId);
+          publishMessage(deadLetterQueue, msgBody);
           break;
         case 403:
           log.info("Publishing message with reference {} to the dead letter queue",
               sendEmailRequest.reference);
-          publishMessage(deadLetterQueue, msgBody, messageGroupId);
+          publishMessage(deadLetterQueue, msgBody);
           break;
         case 429:
           success = retryMessage(sendEmailRequest, 3);
@@ -167,7 +165,7 @@ public class MessagingClient {
           } else {
             log.info("Publishing message with reference {} to the request limit queue",
                 sendEmailRequest.reference);
-            publishMessage(requestLimitQueue, msgBody, messageGroupId);
+            publishMessage(requestLimitQueue, msgBody);
           }
           break;
         case 500:
@@ -177,7 +175,7 @@ public class MessagingClient {
           } else {
             log.info("Publishing message with reference {} to the service error queue",
                 sendEmailRequest.reference);
-            publishMessage(serviceErrorQueue, msgBody, messageGroupId);
+            publishMessage(serviceErrorQueue, msgBody);
           }
           break;
         case 503:
@@ -187,7 +185,7 @@ public class MessagingClient {
           } else {
             log.info("Publishing message with reference {} to the service down queue",
                 sendEmailRequest.reference);
-            publishMessage(serviceDownQueue, msgBody, messageGroupId);
+            publishMessage(serviceDownQueue, msgBody);
           }
           break;
         default:
@@ -197,13 +195,13 @@ public class MessagingClient {
           } else {
             log.info("Publishing message with reference {} to the dead letter queue",
                 sendEmailRequest.reference);
-            publishMessage(deadLetterQueue, msgBody, messageGroupId);
+            publishMessage(deadLetterQueue, msgBody);
           }
           break;
       }
     } catch (IOException e) {
       log.error(e.getMessage());
-      publishMessage(deadLetterQueue, msgBody, messageGroupId);
+      publishMessage(deadLetterQueue, msgBody);
     }
   }
 

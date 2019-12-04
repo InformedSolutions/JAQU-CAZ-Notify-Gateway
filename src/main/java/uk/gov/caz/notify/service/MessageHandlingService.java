@@ -7,11 +7,9 @@ import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.aws.messaging.core.SqsMessageHeaders;
 import org.springframework.stereotype.Service;
 import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.messaging.MessagingClient;
@@ -47,21 +45,13 @@ public class MessageHandlingService {
     for (Message message : messageList) {
       log.info("Processing message with ID: {}", message.getMessageId());
 
-      Map<String, String> msgAttributes = message.getAttributes();
-      String msgGroupId = msgAttributes.get(SqsMessageHeaders.SQS_GROUP_ID_HEADER);
-
-      if (msgGroupId == null) {
-        log.warn("No Message Group ID given for message with ID: {}", message.getMessageId());
-        msgGroupId = "default-group-id";
-      }
-
       try {
         SendEmailRequest request =
             objectMapper.readValue(message.getBody(), SendEmailRequest.class);
-        messagingClient.handleMessage(request, msgGroupId);
+        messagingClient.handleMessage(request);
       } catch (IOException | InstantiationException e) {
         log.error("Failed to process message with id: {}", message.getMessageId());
-        messagingClient.publishMessage(dlqName, message.getBody(), msgGroupId);
+        messagingClient.publishMessage(dlqName, message.getBody());
       }
       amazonSqs.deleteMessage(this.queueUrl, message.getReceiptHandle());
     }
