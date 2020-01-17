@@ -27,7 +27,8 @@
       **/Application.java,
       **/amazonaws/StreamLambdaHandler.java
     </sonar.coverage.exclusions>
-    <sonar.coverage.jacoco.xmlReportPaths>./target/site/jacoco-aggregate/jacoco.xml
+    <sonar.coverage.jacoco.xmlReportPaths>
+      ./target/site/jacoco-aggregate/jacoco.xml
     </sonar.coverage.jacoco.xmlReportPaths>
 
     <!-- to enable running only integration tests without unit tests -->
@@ -423,6 +424,12 @@
     </plugins>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>3.4.0.905</version>
+        </plugin>
+
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>

@@ -64,6 +64,25 @@ steps:
       JAQU_NEXUS_PASSWORD:
         from_secret: nexus_password
 
+  # Integration tests
+  - name: integration test
+    image: notification-gateway-api-base
+    pull: never
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    environment:
+      BUILD_ID: ${DRONE_BUILD_NUMBER}
+      JAQU_NEXUS_URL:
+        from_secret: nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: nexus_password
+    commands:
+      - mvn verify -DskipUnitTests -P jacoco --no-transfer-progress
 
   # Scan with sonar
   - name: sonar scan
@@ -86,14 +105,12 @@ steps:
         from_secret: sonar_token
     pull: never
     commands:
-      #  TODO add src/test/java to sonar.tests once they are present
       - mvn sonar:sonar -Dsonar.host.url=$SONAR_HOST
         -Dsonar.projectKey=${DRONE_REPO}
         -Dsonar.projectName=${DRONE_REPO}
         -Dsonar.login=$SONAR_TOKEN
         -Dsonar.coverage.jacoco.xmlReportPaths=/drone/src/target/site/jacoco-aggregate/jacoco.xml
-        -Dsonar.tests=src/it/java
-        --no-transfer-progress
+        -Dsonar.tests=src/test/java,src/it/java --no-transfer-progress
 
   # Package
   - name: package
