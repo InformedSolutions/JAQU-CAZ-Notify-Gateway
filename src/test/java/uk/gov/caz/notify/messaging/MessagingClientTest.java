@@ -55,10 +55,10 @@ public class MessagingClientTest {
     emailAddress = "test@test.com";
     personalisation = "{}";
 
-    sendEmailRequest.emailAddress = emailAddress;
-    sendEmailRequest.templateId = templateId;
-    sendEmailRequest.personalisation = personalisation;
-    sendEmailRequest.reference = reference;
+    sendEmailRequest.setEmailAddress(emailAddress);
+    sendEmailRequest.setTemplateId(templateId);
+    sendEmailRequest.setPersonalisation(personalisation);
+    sendEmailRequest.setReference(reference);
 
     messageGroupId = "testMsgGroupId";
 
@@ -178,7 +178,7 @@ public class MessagingClientTest {
   void canSendBadlyFormedParametersToDlq()
       throws NotificationClientException, IOException, InstantiationException {
 
-    this.sendEmailRequest.personalisation = "{";
+    this.sendEmailRequest.setPersonalisation("{");
     IOException err = mock(IOException.class);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
 
