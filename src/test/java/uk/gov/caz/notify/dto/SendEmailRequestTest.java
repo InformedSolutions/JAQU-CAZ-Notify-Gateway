@@ -22,10 +22,10 @@ public class SendEmailRequestTest {
     SendEmailRequest sendEmailRequest =
         new SendEmailRequest(template, email, personalisation, reference);
     assertNotNull(sendEmailRequest);
-    assertEquals(template, sendEmailRequest.templateId);
-    assertEquals(email, sendEmailRequest.emailAddress);
-    assertEquals(personalisation, sendEmailRequest.personalisation);
-    assertEquals(reference, sendEmailRequest.reference);
+    assertEquals(template, sendEmailRequest.getTemplateId());
+    assertEquals(email, sendEmailRequest.getEmailAddress());
+    assertEquals(personalisation, sendEmailRequest.getPersonalisation());
+    assertEquals(reference, sendEmailRequest.getReference());
   }
 
 }

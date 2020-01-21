@@ -58,8 +58,8 @@ public class ManualDispatchController {
       throws NotificationClientException, InstantiationException {
     try {
       SendEmailResponse sendEmailResponse =
-          govUkNotifyWrapper.sendEmail(request.templateId, request.emailAddress,
-              request.personalisation, request.reference);
+          govUkNotifyWrapper.sendEmail(request.getTemplateId(), request.getEmailAddress(),
+              request.getPersonalisation(), request.getReference());
       return ResponseEntity.ok(sendEmailResponse);
     } catch (IOException e) {
       return ResponseEntity.badRequest().build();
@@ -76,7 +76,7 @@ public class ManualDispatchController {
       response = ResponseEntity.class)
   @ApiResponses({@ApiResponse(code = 200, message = "Request successful"),})
   @PostMapping("/receiveMessages")
-  public ResponseEntity<?> receiveMessages(
+  public ResponseEntity receiveMessages(
       @RequestBody MessageConsumerRequest request) {
     messageHandlingService.sendQueuedMessages(request.getQueueName());
     return ResponseEntity.ok().build();
