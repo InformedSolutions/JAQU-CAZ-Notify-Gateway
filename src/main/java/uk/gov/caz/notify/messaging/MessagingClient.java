@@ -24,9 +24,16 @@ import uk.gov.service.notify.NotificationClientException;
 @Slf4j
 public class MessagingClient {
 
-  private static final String MESSAGE_SUCCESSFULLY_SENT = "Message successfully sent: {}";
-  private static final String PUBLISHING_MESSAGE_WITH_REFERENCE_TO_THE_DEAD_LETTER_QUEUE =
-      "Publishing message with reference {} to the dead letter queue";
+  private static final String MESSAGE_SUCCESSFULLY_SENT = "Message successfully sent";
+  private static final String PUBLISHING_MESSAGE_TO_THE_DOWN_LETTER_QUEUE =
+      "Publishing message to the service down queue";
+  private static final String PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE =
+      "Publishing message to the dead letter queue";
+  private static final String PUBLISHING_MESSAGE_TO_THE_ERROR_QUEUE =
+      "Publishing message to the service error queue";
+  private static final String PUBLISHING_MESSAGE_TO_THE_REQUEST_LIMIT_QUEUE =
+      "Publishing message to the request limit queue";
+
   private final AmazonSQS client;
   private final GovUkNotifyWrapper govUkNotifyWrapper;
   private final ObjectMapper objectMapper;
@@ -114,7 +121,7 @@ public class MessagingClient {
   private boolean retryMessage(SendEmailRequest sendEmailRequest, int i)
       throws InstantiationException {
     while (i > 0) {
-      log.info("Retrying message with reference: {}", sendEmailRequest.getReference());
+      log.info("Retrying to send message. Attempts left: {}", i);
       try {
         govUkNotifyWrapper
             .sendEmail(sendEmailRequest.getTemplateId(), sendEmailRequest.getEmailAddress(),
@@ -139,63 +146,57 @@ public class MessagingClient {
       throws JsonProcessingException, InstantiationException {
     String msgBody = objectMapper.writeValueAsString(sendEmailRequest);
     try {
-      log.info("Sending email with reference {}", sendEmailRequest.getReference());
+      log.info("Sending email initiated");
       govUkNotifyWrapper
           .sendEmail(sendEmailRequest.getTemplateId(), sendEmailRequest.getEmailAddress(),
               sendEmailRequest.getPersonalisation(), sendEmailRequest.getReference());
-      log.info(MESSAGE_SUCCESSFULLY_SENT, sendEmailRequest.getReference());
+      log.info(MESSAGE_SUCCESSFULLY_SENT);
     } catch (NotificationClientException e) {
       int status = e.getHttpResult();
       log.error(e.getMessage());
-      log.info("Got status {} from Notify Gateway for message: {}", status,
-          sendEmailRequest.getReference());
+      log.info("Got status from Notify Gateway");
 
       boolean success;
 
       switch (status) {
         case 400:
         case 403:
-          log.info(PUBLISHING_MESSAGE_WITH_REFERENCE_TO_THE_DEAD_LETTER_QUEUE,
-              sendEmailRequest.getReference());
+          log.info(PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE);
           publishMessage(deadLetterQueue, msgBody);
           break;
         case 429:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info(MESSAGE_SUCCESSFULLY_SENT, sendEmailRequest.getReference());
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info("Publishing message with reference {} to the request limit queue",
-                sendEmailRequest.getReference());
+            log.info(PUBLISHING_MESSAGE_TO_THE_REQUEST_LIMIT_QUEUE);
             publishMessage(requestLimitQueue, msgBody);
           }
           break;
         case 500:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info(MESSAGE_SUCCESSFULLY_SENT, sendEmailRequest.getReference());
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info("Publishing message with reference {} to the service error queue",
-                sendEmailRequest.getReference());
+            log.info(PUBLISHING_MESSAGE_TO_THE_ERROR_QUEUE);
             publishMessage(serviceErrorQueue, msgBody);
           }
           break;
         case 503:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info(MESSAGE_SUCCESSFULLY_SENT, sendEmailRequest.getReference());
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info("Publishing message with reference {} to the service down queue",
-                sendEmailRequest.getReference());
+            log.info(PUBLISHING_MESSAGE_TO_THE_DOWN_LETTER_QUEUE);
             publishMessage(serviceDownQueue, msgBody);
           }
           break;
         default:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info(MESSAGE_SUCCESSFULLY_SENT, sendEmailRequest.getReference());
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info(PUBLISHING_MESSAGE_WITH_REFERENCE_TO_THE_DEAD_LETTER_QUEUE,
-                sendEmailRequest.getReference());
+            log.info(PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE);
             publishMessage(deadLetterQueue, msgBody);
           }
           break;
