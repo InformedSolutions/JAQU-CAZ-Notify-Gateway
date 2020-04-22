@@ -60,7 +60,7 @@ steps:
       JAQU_NEXUS_URL:
         from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: jaqu_lower_nexus_usernamejaqu_lower_
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
         from_secret: jaqu_lower_nexus_password
 
@@ -254,67 +254,3 @@ get:
   name: nexusPassword
 
 ################################################ End Secrets -IAC Resrucgture #########################################################
-
-
-  ################################################ Secrets #########################################################
-
-
-
-# Note the below values are pulled from AWS Secrets Manager via the aws-secrets Drone plugin
----
-kind: secret
-name: aws_access_key_id
-get:
-  path: /secret/drone.global
-  name: awsAccessKeyId
-
----
-kind: secret
-name: aws_secret_access_key
-get:
-  path: /secret/drone.global
-  name: awsSecretAccessKey
-
----
-kind: secret
-name: sonar_host
-get:
-  path: /secret/drone.global
-  name: sonarHost
-
----
-kind: secret
-name: sonar_token
-get:
-  path: /secret/drone.global
-  name: sonarToken
-
----
-kind: secret
-name: github_private_key
-get:
-  path: /secret/drone.global
-  name: githubPrivateKey
-
----
-kind: secret
-name: nexus_url
-get:
-  path: /secret/drone.global
-  name: nexusUrl
-
----
-kind: secret
-name: nexus_username
-get:
-  path: /secret/drone.global
-  name: nexusUsername
-
----
-kind: secret
-name: nexus_password
-get:
-  path: /secret/drone.global
-  name: nexusPassword
-
-  ################################################ End Secrets #########################################################
