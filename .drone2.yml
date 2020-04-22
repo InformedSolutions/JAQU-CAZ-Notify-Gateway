@@ -1,0 +1,320 @@
+################################################### DEV Steps ########################################################
+
+kind: pipeline
+type: docker
+name: notification-gateway-dev
+
+trigger:
+  branch:
+    - iac-restructure-baseline
+  event:
+    - pull_request
+    - push
+concurrency:
+  limit: 1
+
+volumes:
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
+
+  - name: package_directory
+    temp: {}
+
+  - name: m2_repo
+    temp: {}
+
+
+steps:
+
+  # Clean agent images and containers to prevent disk space overuse
+  - name: clean agent
+    image: docker
+    commands:
+      - docker system prune -f
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Build docker images
+  - name: build docker maven base
+    image: docker
+    commands:
+      - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Unit test
+  - name: unit test
+    image: notification-gateway-api-base
+    pull: never
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    commands:
+      - mvn test -P jacoco --no-transfer-progress
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_usernamejaqu_lower_
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+
+  # Integration tests
+  - name: integration test
+    image: notification-gateway-api-base
+    pull: never
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    environment:
+      BUILD_ID: ${DRONE_BUILD_NUMBER}
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+    commands:
+      - mvn verify -DskipUnitTests -P jacoco --no-transfer-progress
+
+  # Scan with sonar
+  - name: sonar scan
+    image: notification-gateway-api-base
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_sonar_host
+      SONAR_TOKEN:
+        from_secret: jaqu_lower_sonar_token
+    pull: never
+    commands:
+      - mvn sonar:sonar -Dsonar.host.url=$SONAR_HOST
+        -Dsonar.projectKey=${DRONE_REPO}
+        -Dsonar.projectName=${DRONE_REPO}
+        -Dsonar.login=$SONAR_TOKEN
+        -Dsonar.coverage.jacoco.xmlReportPaths=/drone/src/target/site/jacoco-aggregate/jacoco.xml
+        -Dsonar.tests=src/test/java,src/it/java --no-transfer-progress
+
+  # Package
+  - name: package
+    image: notification-gateway-api-base
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+      BUILD_ID: ${DRONE_BUILD_NUMBER}
+    pull: never
+    commands:
+      - mvn package -DskipUnitTests
+
+  # Invoke terraform scripts to deploy lambda function
+  - name: deploy to dev
+    image: hashicorp/terraform:0.12.3
+    volumes:
+      - name: package_directory
+        path: /opt/package
+    commands:
+      - apk update && apk add bash
+      - mkdir ~/.ssh
+      - echo -e "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - touch ~/.ssh/known_hosts
+      - chmod 600 ~/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
+      - cd JAQU-CAZ-IAC
+      - git checkout iac_restructure_baseline
+      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
+      - cd terraform-api/projects/notify-gateway/layers/01.api
+      - PATH=$PATH:../../../../bin/
+      - chmod +x ../../../../bin/tf
+      - tf init
+      - tf workspace select dev
+      - tf apply -auto-approve
+    environment:
+      TF_VAR_access_key:
+        from_secret: jaqu_lower_aws_access_key_id
+      TF_VAR_secret_key:
+        from_secret: jaqu_lower_aws_secret_access_key
+      GIT_PRIVATE_SSH:
+        from_secret: jaqu_lower_github_private_key
+    when:
+      event:
+        - push
+
+  - name: codedeploy api dev
+    image: alpine:latest
+    commands:
+      - apk add --update bash python python-dev py-pip build-base jq
+      - pip install awscli
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
+      - bash deploy_lambda.sh
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_lower_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_lower_aws_secret_access_key
+      AWS_DEFAULT_REGION: eu-west-2
+      AWS_ACCOUNT_ROLE: arn:aws:iam::311075478274:role/jaqu-lowerServiceRole
+      PROJECT: notify-gateway
+      DEPLOY_ENVIRONMENT: dev
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
+    when:
+      event:
+        - push
+
+  ################################################# End DEV Steps #######################################################
+
+
+
+
+  ################################################ Secrets - IAC Restructure #########################################################
+
+# Note the below values are pulled from AWS Secrets Manager via the aws-secrets Drone plugin
+---
+kind: secret
+name: jaqu_lower_aws_access_key_id
+get:
+  path: /build-tools/drone
+  name: awsAccessKeyId
+
+---
+kind: secret
+name: jaqu_lower_aws_secret_access_key
+get:
+  path: /build-tools/drone
+  name: awsSecretAccessKey
+
+
+---
+kind: secret
+name: jaqu_lower_sonar_host
+get:
+  path: /build-tools/drone
+  name: sonarHost
+
+---
+kind: secret
+name: jaqu_lower_sonar_token
+get:
+  path: /build-tools/drone
+  name: sonarToken
+
+---
+kind: secret
+name: jaqu_lower_github_private_key
+get:
+  path: /build-tools/drone
+  name: githubPrivateKey
+
+---
+kind: secret
+name: jaqu_lower_nexus_url
+get:
+  path: /build-tools/drone
+  name: nexusUrl
+
+---
+kind: secret
+name: jaqu_lower_nexus_username
+get:
+  path: /build-tools/drone
+  name: nexusUsername
+
+---
+kind: secret
+name: jaqu_lower_nexus_password
+get:
+  path: /build-tools/drone
+  name: nexusPassword
+
+################################################ End Secrets -IAC Resrucgture #########################################################
+
+
+  ################################################ Secrets #########################################################
+
+
+
+# Note the below values are pulled from AWS Secrets Manager via the aws-secrets Drone plugin
+---
+kind: secret
+name: aws_access_key_id
+get:
+  path: /secret/drone.global
+  name: awsAccessKeyId
+
+---
+kind: secret
+name: aws_secret_access_key
+get:
+  path: /secret/drone.global
+  name: awsSecretAccessKey
+
+---
+kind: secret
+name: sonar_host
+get:
+  path: /secret/drone.global
+  name: sonarHost
+
+---
+kind: secret
+name: sonar_token
+get:
+  path: /secret/drone.global
+  name: sonarToken
+
+---
+kind: secret
+name: github_private_key
+get:
+  path: /secret/drone.global
+  name: githubPrivateKey
+
+---
+kind: secret
+name: nexus_url
+get:
+  path: /secret/drone.global
+  name: nexusUrl
+
+---
+kind: secret
+name: nexus_username
+get:
+  path: /secret/drone.global
+  name: nexusUsername
+
+---
+kind: secret
+name: nexus_password
+get:
+  path: /secret/drone.global
+  name: nexusPassword
+
+  ################################################ End Secrets #########################################################
