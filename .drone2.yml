@@ -150,7 +150,7 @@ steps:
       - cd JAQU-CAZ-IAC
       - git checkout iac_restructure_baseline
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform-api/projects/notify-gateway/layers/01.api
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
