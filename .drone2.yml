@@ -153,9 +153,9 @@ steps:
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
-      - tf init dev
+      - tf init
       - tf workspace select dev
-      - tf init dev
+      - tf init
       - tf apply -auto-approve
     environment:
       TF_VAR_access_key:
@@ -164,6 +164,10 @@ steps:
         from_secret: jaqu_lower_aws_secret_access_key
       GIT_PRIVATE_SSH:
         from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_lower_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_lower_aws_secret_access_key
     when:
       event:
         - push
