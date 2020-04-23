@@ -153,8 +153,9 @@ steps:
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
-      - tf init
+      - tf init dev
       - tf workspace select dev
+      - tf init dev
       - tf apply -auto-approve
     environment:
       TF_VAR_access_key:
