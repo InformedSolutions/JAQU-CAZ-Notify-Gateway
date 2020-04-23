@@ -103,7 +103,7 @@ steps:
         from_secret: jaqu_lower_sonar_token
     pull: never
     commands:
-      - mvn sonar:sonar -Dsonar.host.url=$SONAR_HOST
+      - mvn -U sonar:sonar -Dsonar.host.url=$SONAR_HOST
         -Dsonar.projectKey=${DRONE_REPO}
         -Dsonar.projectName=${DRONE_REPO}
         -Dsonar.login=$SONAR_TOKEN
