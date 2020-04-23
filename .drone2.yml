@@ -98,6 +98,8 @@ steps:
       JAQU_NEXUS_USER:
         from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+      SONAR_HOST:
         from_secret: jaqu_lower_sonar_host
       SONAR_TOKEN:
         from_secret: jaqu_lower_sonar_token
