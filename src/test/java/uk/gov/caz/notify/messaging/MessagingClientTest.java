@@ -55,10 +55,10 @@ public class MessagingClientTest {
     emailAddress = "test@test.com";
     personalisation = "{}";
 
-    sendEmailRequest.emailAddress = emailAddress;
-    sendEmailRequest.templateId = templateId;
-    sendEmailRequest.personalisation = personalisation;
-    sendEmailRequest.reference = reference;
+    sendEmailRequest.setEmailAddress(emailAddress);
+    sendEmailRequest.setTemplateId(templateId);
+    sendEmailRequest.setPersonalisation(personalisation);
+    sendEmailRequest.setReference(reference);
 
     messageGroupId = "testMsgGroupId";
 
@@ -82,7 +82,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation, reference))
         .thenThrow(err);
 
-    messagingClient.handleMessage(sendEmailRequest, messageGroupId);
+    messagingClient.handleMessage(sendEmailRequest);
 
     Mockito.verify(govUkNotifyWrapper, times(1)).sendEmail(templateId, emailAddress,
         personalisation, reference);
@@ -99,7 +99,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation, reference))
         .thenThrow(err);
 
-    messagingClient.handleMessage(sendEmailRequest, messageGroupId);
+    messagingClient.handleMessage(sendEmailRequest);
 
     Mockito.verify(govUkNotifyWrapper, times(1)).sendEmail(templateId, emailAddress,
         personalisation, reference);
@@ -116,7 +116,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation, reference))
         .thenThrow(err);
 
-    messagingClient.handleMessage(sendEmailRequest, messageGroupId);
+    messagingClient.handleMessage(sendEmailRequest);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId, emailAddress,
         personalisation, reference);
@@ -133,7 +133,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation, reference))
         .thenThrow(err);
 
-    messagingClient.handleMessage(sendEmailRequest, messageGroupId);
+    messagingClient.handleMessage(sendEmailRequest);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId, emailAddress,
         personalisation, reference);
@@ -150,7 +150,7 @@ public class MessagingClientTest {
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress, personalisation, reference))
         .thenThrow(err);
 
-    messagingClient.handleMessage(sendEmailRequest, messageGroupId);
+    messagingClient.handleMessage(sendEmailRequest);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId, emailAddress,
         personalisation, reference);
@@ -167,7 +167,7 @@ public class MessagingClientTest {
         .thenThrow(err);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
 
-    messagingClient.handleMessage(sendEmailRequest, messageGroupId);
+    messagingClient.handleMessage(sendEmailRequest);
 
     Mockito.verify(govUkNotifyWrapper, times(4)).sendEmail(templateId, emailAddress,
         personalisation, reference);
@@ -178,14 +178,14 @@ public class MessagingClientTest {
   void canSendBadlyFormedParametersToDlq()
       throws NotificationClientException, IOException, InstantiationException {
 
-    this.sendEmailRequest.personalisation = "{";
+    this.sendEmailRequest.setPersonalisation("{");
     IOException err = mock(IOException.class);
     Mockito.when(err.getMessage()).thenReturn("Error thrown successfully.");
 
     Mockito.when(govUkNotifyWrapper.sendEmail(templateId, emailAddress, "{", reference))
         .thenThrow(err);
 
-    messagingClient.handleMessage(sendEmailRequest, messageGroupId);
+    messagingClient.handleMessage(sendEmailRequest);
 
     Mockito.verify(govUkNotifyWrapper, times(1)).sendEmail(templateId, emailAddress, "{",
         reference);

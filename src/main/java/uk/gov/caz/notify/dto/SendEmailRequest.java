@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SendEmailRequest {
 
-  public String templateId;
-  public String emailAddress;
-  public String personalisation;
-  public String reference;
+  private String templateId;
+  private String emailAddress;
+  private String personalisation;
+  private String reference;
 
 }

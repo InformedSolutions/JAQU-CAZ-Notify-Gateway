@@ -85,9 +85,8 @@ public class MessageHandlingServiceTest {
     // assertions
     Mockito.verify(amazonSqs, times(1)).receiveMessage(Mockito.any(ReceiveMessageRequest.class));
     Mockito.verify(amazonSqs, times(2)).deleteMessage("testUrl", "testHandle");
-    Mockito.verify(messagingClient, times(1)).publishMessage(null, "", "testId");
-    Mockito.verify(messagingClient, times(1)).handleMessage(Mockito.any(SendEmailRequest.class),
-        Mockito.anyString());
+    Mockito.verify(messagingClient, times(1)).publishMessage(null, "");
+    Mockito.verify(messagingClient, times(1)).handleMessage(Mockito.any(SendEmailRequest.class));
 
   }
 

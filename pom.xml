@@ -20,16 +20,42 @@
     <artifactFinalName>${project.artifactId}-${project.version}</artifactFinalName>
     <internal.libraries.version>1.8.0-SNAPSHOT</internal.libraries.version>
 
-    <codeCoverage.minCoveredRatio>0.90</codeCoverage.minCoveredRatio>
+    <codeCoverage.minCoveredRatio>0.70</codeCoverage.minCoveredRatio>
     <codeCoverage.classMaxMissedCount>0</codeCoverage.classMaxMissedCount>
 
     <sonar.coverage.exclusions>**/configuration/**/*.java,
       **/Application.java,
       **/amazonaws/StreamLambdaHandler.java,
-      **/util/AwsHelpers.java
+      **/domain/QueueName.java
     </sonar.coverage.exclusions>
-    <sonar.coverage.jacoco.xmlReportPaths>./target/site/jacoco-aggregate/jacoco.xml
+    <sonar.coverage.jacoco.xmlReportPaths>
+      ./target/site/jacoco-aggregate/jacoco.xml
     </sonar.coverage.jacoco.xmlReportPaths>
+
+    <!-- Sonar rule exclusions - begin -->
+    <sonar.issue.ignore.multicriteria>j1,j2,j3</sonar.issue.ignore.multicriteria>
+    <!-- Using command line arguments is security-sensitive -->
+    <sonar.issue.ignore.multicriteria.j1.ruleKey>
+      squid:S4823
+    </sonar.issue.ignore.multicriteria.j1.ruleKey>
+    <sonar.issue.ignore.multicriteria.j1.resourceKey>
+      **/*.java
+    </sonar.issue.ignore.multicriteria.j1.resourceKey>
+    <!-- Cognitive Complexity of methods should not be too high -->
+    <sonar.issue.ignore.multicriteria.j2.ruleKey>
+      squid:S3776
+    </sonar.issue.ignore.multicriteria.j2.ruleKey>
+    <sonar.issue.ignore.multicriteria.j2.resourceKey>
+      **/*.java
+    </sonar.issue.ignore.multicriteria.j2.resourceKey>
+    <!-- Tests should include assertions -->
+    <sonar.issue.ignore.multicriteria.j3.ruleKey>
+      squid:S2699
+    </sonar.issue.ignore.multicriteria.j3.ruleKey>
+    <sonar.issue.ignore.multicriteria.j3.resourceKey>
+      **/*.java
+    </sonar.issue.ignore.multicriteria.j3.resourceKey>
+    <!-- Sonar rule exclusions - end -->
 
     <!-- to enable running only integration tests without unit tests -->
     <skipUnitTests>${skipTests}</skipUnitTests>
@@ -424,6 +450,12 @@
     </plugins>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>3.4.0.905</version>
+        </plugin>
+
         <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
@@ -504,7 +536,7 @@
                 <exclude>**/configuration/**/*.class</exclude>
                 <exclude>**/Application.class</exclude>
                 <exclude>**/amazonaws/StreamLambdaHandler.class</exclude>
-                <exclude>**/util/AwsHelpers.class</exclude>
+                <exclude>**/domain/QueueName.class</exclude>
               </excludes>
               <rules>
                 <rule>

@@ -20,9 +20,7 @@ import uk.gov.caz.notify.service.MessageHandlingService;
 @Slf4j
 public class StreamLambdaHandler implements RequestStreamHandler {
 
-  private static SpringBootLambdaContainerHandler<AwsProxyRequest, AwsProxyResponse> handler;
-
-  private MessageHandlingService messageHandlingService;
+  private SpringBootLambdaContainerHandler<AwsProxyRequest, AwsProxyResponse> handler;
 
   private ObjectMapper obj = new ObjectMapper();
 
@@ -34,7 +32,7 @@ public class StreamLambdaHandler implements RequestStreamHandler {
       handler = AwsHelpers.initSpringBootHandler(Application.class);
     }
 
-    messageHandlingService =
+    MessageHandlingService messageHandlingService =
         this.getBean(handler, MessageHandlingService.class);
 
     try {

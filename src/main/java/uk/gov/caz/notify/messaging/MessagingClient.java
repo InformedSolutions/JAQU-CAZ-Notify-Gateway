@@ -24,6 +24,16 @@ import uk.gov.service.notify.NotificationClientException;
 @Slf4j
 public class MessagingClient {
 
+  private static final String MESSAGE_SUCCESSFULLY_SENT = "Message successfully sent";
+  private static final String PUBLISHING_MESSAGE_TO_THE_DOWN_LETTER_QUEUE =
+      "Publishing message to the service down queue";
+  private static final String PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE =
+      "Publishing message to the dead letter queue";
+  private static final String PUBLISHING_MESSAGE_TO_THE_ERROR_QUEUE =
+      "Publishing message to the service error queue";
+  private static final String PUBLISHING_MESSAGE_TO_THE_REQUEST_LIMIT_QUEUE =
+      "Publishing message to the request limit queue";
+
   private final AmazonSQS client;
   private final GovUkNotifyWrapper govUkNotifyWrapper;
   private final ObjectMapper objectMapper;
@@ -45,7 +55,7 @@ public class MessagingClient {
 
   /**
    * Constructor for the external queuing provider client.
-   * 
+   *
    * @param client a synchronous client for interfacing with Amazon SQS
    * @param govUkNotifyWrapper a wrapper for the Gov.UK Notify service
    * @param objectMapper library class for serializing and deserializing JSON
@@ -59,16 +69,15 @@ public class MessagingClient {
 
   /**
    * A method to publish a message to a queue.
-   * 
+   *
    * @param queueName the queue which the message should be sent to
    * @param message the message object
-   * @param messageGroupId an identifier to distinguish payment receipts in a queue
    */
-  public void publishMessage(String queueName, String message, String messageGroupId) {
+  public void publishMessage(String queueName, String message) {
     SendMessageRequest sendMessageRequest = new SendMessageRequest();
     UUID messageDeduplicationId = UUID.randomUUID();
 
-    sendMessageRequest.setMessageGroupId(messageGroupId);
+    sendMessageRequest.setMessageGroupId(UUID.randomUUID().toString());
     sendMessageRequest.setMessageDeduplicationId(messageDeduplicationId.toString());
     sendMessageRequest.putCustomRequestHeader("contentType", "application/json");
     sendMessageRequest.setQueueUrl(client.getQueueUrl(queueName).getQueueUrl());
@@ -87,12 +96,12 @@ public class MessagingClient {
   /**
    * Helper method to strip out useful headers and add new headers should a message need to be sent
    * to a new queue.
-   * 
+   *
    * @param oldHeaders the previous headers to be filtered
    * @return new headers
    */
   public Map<String, Object> filterHeaders(Map<String, String> oldHeaders) {
-    Map<String, Object> newHeaders = new HashMap<String, Object>();
+    Map<String, Object> newHeaders = new HashMap<>();
 
     String messageGroupId = oldHeaders.get("MessageGroupId");
     newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER, messageGroupId);
@@ -103,7 +112,7 @@ public class MessagingClient {
 
   /**
    * Helper method to retry sending the message.
-   * 
+   *
    * @param sendEmailRequest the key parameters of the email to be sent
    * @param i the number of attempts to try
    * @return true if message successfully sent, false otherwise
@@ -112,10 +121,11 @@ public class MessagingClient {
   private boolean retryMessage(SendEmailRequest sendEmailRequest, int i)
       throws InstantiationException {
     while (i > 0) {
-      log.info("Retrying message with reference: {}", sendEmailRequest.reference);
+      log.info("Retrying to send message. Attempts left: {}", i);
       try {
-        govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId, sendEmailRequest.emailAddress,
-            sendEmailRequest.personalisation, sendEmailRequest.reference);
+        govUkNotifyWrapper
+            .sendEmail(sendEmailRequest.getTemplateId(), sendEmailRequest.getEmailAddress(),
+                sendEmailRequest.getPersonalisation(), sendEmailRequest.getReference());
         return true;
       } catch (NotificationClientException | IOException e) {
         i = i - 1;
@@ -127,90 +137,80 @@ public class MessagingClient {
 
   /**
    * Handles the sending of the email and manages any errors thrown as a result of this process.
-   * 
+   *
    * @param sendEmailRequest the body of the email request to be sent
-   * @param messageGroupId the message headers received from SQS
    * @throws JsonProcessingException thrown if the request cannot be written to a string
    * @throws InstantiationException thrown if the API key for Notify is not set
    */
-  public void handleMessage(SendEmailRequest sendEmailRequest, String messageGroupId)
+  public void handleMessage(SendEmailRequest sendEmailRequest)
       throws JsonProcessingException, InstantiationException {
     String msgBody = objectMapper.writeValueAsString(sendEmailRequest);
     try {
-      log.info("Sending email with reference {}", sendEmailRequest.reference);
-      govUkNotifyWrapper.sendEmail(sendEmailRequest.templateId, sendEmailRequest.emailAddress,
-          sendEmailRequest.personalisation, sendEmailRequest.reference);
-      log.info("Message successfully sent: {}", sendEmailRequest.reference);
+      log.info("Sending email initiated");
+      govUkNotifyWrapper
+          .sendEmail(sendEmailRequest.getTemplateId(), sendEmailRequest.getEmailAddress(),
+              sendEmailRequest.getPersonalisation(), sendEmailRequest.getReference());
+      log.info(MESSAGE_SUCCESSFULLY_SENT);
     } catch (NotificationClientException e) {
       int status = e.getHttpResult();
       log.error(e.getMessage());
-      log.info("Got status {} from Notify Gateway for message: {}", status,
-          sendEmailRequest.reference);
+      log.info("Got status from Notify Gateway");
 
       boolean success;
 
       switch (status) {
         case 400:
-          log.info("Publishing message with reference {} to the dead letter queue",
-              sendEmailRequest.reference);
-          publishMessage(deadLetterQueue, msgBody, messageGroupId);
-          break;
         case 403:
-          log.info("Publishing message with reference {} to the dead letter queue",
-              sendEmailRequest.reference);
-          publishMessage(deadLetterQueue, msgBody, messageGroupId);
+          log.info(PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE);
+          publishMessage(deadLetterQueue, msgBody);
           break;
         case 429:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info("Message successfully sent: {}", sendEmailRequest.reference);
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info("Publishing message with reference {} to the request limit queue",
-                sendEmailRequest.reference);
-            publishMessage(requestLimitQueue, msgBody, messageGroupId);
+            log.info(PUBLISHING_MESSAGE_TO_THE_REQUEST_LIMIT_QUEUE);
+            publishMessage(requestLimitQueue, msgBody);
           }
           break;
         case 500:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info("Message successfully sent: {}", sendEmailRequest.reference);
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info("Publishing message with reference {} to the service error queue",
-                sendEmailRequest.reference);
-            publishMessage(serviceErrorQueue, msgBody, messageGroupId);
+            log.info(PUBLISHING_MESSAGE_TO_THE_ERROR_QUEUE);
+            publishMessage(serviceErrorQueue, msgBody);
           }
           break;
         case 503:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info("Message successfully sent: {}", sendEmailRequest.reference);
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info("Publishing message with reference {} to the service down queue",
-                sendEmailRequest.reference);
-            publishMessage(serviceDownQueue, msgBody, messageGroupId);
+            log.info(PUBLISHING_MESSAGE_TO_THE_DOWN_LETTER_QUEUE);
+            publishMessage(serviceDownQueue, msgBody);
           }
           break;
         default:
           success = retryMessage(sendEmailRequest, 3);
           if (success) {
-            log.info("Message successfully sent: {}", sendEmailRequest.reference);
+            log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
-            log.info("Publishing message with reference {} to the dead letter queue",
-                sendEmailRequest.reference);
-            publishMessage(deadLetterQueue, msgBody, messageGroupId);
+            log.info(PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE);
+            publishMessage(deadLetterQueue, msgBody);
           }
           break;
       }
     } catch (IOException e) {
       log.error(e.getMessage());
-      publishMessage(deadLetterQueue, msgBody, messageGroupId);
+      publishMessage(deadLetterQueue, msgBody);
     }
   }
 
   /**
    * Helper method to return a full queue name (with consideration for environment) from the generic
    * name of a queue.
-   * 
+   *
    * @param queueName generic name of the queue
    * @return full name of queue target
    */

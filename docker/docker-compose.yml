@@ -1,1 +1,8 @@
 version: '3.3'
+
+services:
+  sonarqube:
+    image: sonarqube
+    container_name: sonarqube.docker
+    ports:
+      - 9000:9000
