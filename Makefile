@@ -12,7 +12,7 @@
 	create-archetype
 
 build:
-	./mvnw verify
+	./mvnw verify -P jacoco
 
 build-yolo:
 	./mvnw verify -DskipTests
@@ -68,10 +68,13 @@ create-archetype: clean
 	./mvnw archetype:create-from-project
 	./mvnw -f target/generated-sources/archetype/pom.xml install
 
-local-db-up:
+sonar:
+	./mvnw sonar:sonar
+
+local-up:
 	docker-compose -f docker/docker-compose.yml -p postgres_docker up -d
 
-local-db-down:
+local-down:
 	docker-compose -f docker/docker-compose.yml -p postgres_docker down
 
 # Example run: 'make sam-local-run EVENT=src/test/resources/sample_lambda_events/import_10_taxis.json'
