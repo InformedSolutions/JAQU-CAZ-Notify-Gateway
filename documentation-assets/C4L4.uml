@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>uk.gov.caz.notify.controller.ManualDispatchController</OriginalElement>
+  <nodes>
+    <node x="193.0" y="104.0">uk.gov.caz.notify.messaging.MessagingClient</node>
+    <node x="196.0" y="0.0">uk.gov.caz.notify.domain.QueueName</node>
+    <node x="336.0" y="0.0">uk.gov.caz.notify.repository.GovUkNotifyWrapper</node>
+    <node x="0.0" y="0.0">uk.gov.caz.notify.dto.SendEmailRequest</node>
+    <node x="69.39880952380952" y="208.0">uk.gov.caz.notify.service.MessageHandlingService</node>
+    <node x="489.9821428571429" y="208.0">uk.gov.caz.notify.dto.MessageConsumerRequest</node>
+    <node x="224.39880952380952" y="322.0">uk.gov.caz.notify.controller.ManualDispatchController</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="uk.gov.caz.notify.messaging.MessagingClient" target="uk.gov.caz.notify.repository.GovUkNotifyWrapper">
+      <point x="63.0" y="-27.0" />
+      <point x="340.0" y="84.0" />
+      <point x="408.0" y="84.0" />
+      <point x="-24.0" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.messaging.MessagingClient" target="uk.gov.caz.notify.domain.QueueName">
+      <point x="-21.0" y="-27.0" />
+      <point x="0.0" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.messaging.MessagingClient" target="uk.gov.caz.notify.dto.SendEmailRequest">
+      <point x="-63.0" y="-27.0" />
+      <point x="214.0" y="84.0" />
+      <point x="146.66666666666666" y="84.0" />
+      <point x="58.66666666666666" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.controller.ManualDispatchController" target="uk.gov.caz.notify.dto.MessageConsumerRequest">
+      <point x="100.0" y="-27.0" />
+      <point x="444.3988095238095" y="302.0" />
+      <point x="601.9821428571429" y="302.0" />
+      <point x="0.0" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.service.MessageHandlingService" target="uk.gov.caz.notify.dto.SendEmailRequest">
+      <point x="-56.0" y="-27.0" />
+      <point x="125.39880952380952" y="183.0" />
+      <point x="91.91666666666669" y="183.0" />
+      <point x="91.91666666666669" y="84.0" />
+      <point x="88.0" y="84.0" />
+      <point x="0.0" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.controller.ManualDispatchController" target="uk.gov.caz.notify.repository.GovUkNotifyWrapper">
+      <point x="20.0" y="-27.0" />
+      <point x="364.3988095238095" y="282.0" />
+      <point x="468.4821428571429" y="282.0" />
+      <point x="468.4821428571429" y="84.0" />
+      <point x="456.0" y="84.0" />
+      <point x="24.0" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.controller.ManualDispatchController" target="uk.gov.caz.notify.dto.SendEmailRequest">
+      <point x="-100.0" y="-27.0" />
+      <point x="244.39880952380952" y="302.0" />
+      <point x="48.14880952380952" y="302.0" />
+      <point x="48.14880952380952" y="84.0" />
+      <point x="29.333333333333314" y="84.0" />
+      <point x="-58.666666666666686" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.service.MessageHandlingService" target="uk.gov.caz.notify.messaging.MessagingClient">
+      <point x="56.0" y="-27.0" />
+      <point x="237.39880952380952" y="183.0" />
+      <point x="277.0" y="183.0" />
+      <point x="0.0" y="27.0" />
+    </edge>
+    <edge source="uk.gov.caz.notify.controller.ManualDispatchController" target="uk.gov.caz.notify.service.MessageHandlingService">
+      <point x="-60.0" y="-27.0" />
+      <point x="284.3988095238095" y="292.0" />
+      <point x="125.39880952380952" y="292.0" />
+      <point x="-56.0" y="27.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="1.0" x="446.5" y="386.0" />
+  <SelectedNodes />
+  <Categories />
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+
