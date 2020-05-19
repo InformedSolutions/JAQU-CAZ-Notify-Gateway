@@ -106,7 +106,6 @@ steps:
     pull: never
     commands:
       - mvn -U sonar:sonar -Dsonar.host.url=$SONAR_HOST
-        -Dsonar.projectKey=${DRONE_REPO}
         -Dsonar.projectName=${DRONE_REPO}
         -Dsonar.login=$SONAR_TOKEN
         -Dsonar.coverage.jacoco.xmlReportPaths=/drone/src/target/site/jacoco-aggregate/jacoco.xml
