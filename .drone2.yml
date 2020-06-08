@@ -174,7 +174,7 @@ steps:
         - push
 
   - name: codedeploy api dev
-    image: alpine:latest
+    image: alpine:3.11.6
     commands:
       - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
@@ -419,7 +419,7 @@ steps:
         - push
 
   - name: codedeploy api st
-    image: alpine:latest
+    image: alpine:3.11.6
     commands:
       - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
