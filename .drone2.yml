@@ -168,6 +168,7 @@ steps:
         from_secret: jaqu_lower_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
         from_secret: jaqu_lower_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-lower
     when:
       event:
         - push
@@ -365,6 +366,7 @@ steps:
         from_secret: jaqu_controlled_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
         from_secret: jaqu_controlled_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-controlled
     when:
       event:
         - push
