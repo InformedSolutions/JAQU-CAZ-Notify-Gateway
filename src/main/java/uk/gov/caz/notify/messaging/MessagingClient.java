@@ -5,12 +5,9 @@ import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.aws.messaging.core.SqsMessageHeaders;
 import org.springframework.stereotype.Component;
 import uk.gov.caz.notify.domain.QueueName;
 import uk.gov.caz.notify.dto.SendEmailRequest;
@@ -91,23 +88,6 @@ public class MessagingClient {
     log.info("Sending email message object to SQS queue {} with de-duplication ID: {}", queueName,
         messageDeduplicationId);
     client.sendMessage(sendMessageRequest);
-  }
-
-  /**
-   * Helper method to strip out useful headers and add new headers should a message need to be sent
-   * to a new queue.
-   *
-   * @param oldHeaders the previous headers to be filtered
-   * @return new headers
-   */
-  public Map<String, Object> filterHeaders(Map<String, String> oldHeaders) {
-    Map<String, Object> newHeaders = new HashMap<>();
-
-    String messageGroupId = oldHeaders.get("MessageGroupId");
-    newHeaders.put(SqsMessageHeaders.SQS_GROUP_ID_HEADER, messageGroupId);
-    newHeaders.put(SqsMessageHeaders.SQS_DEDUPLICATION_ID_HEADER, UUID.randomUUID().toString());
-
-    return newHeaders;
   }
 
   /**
