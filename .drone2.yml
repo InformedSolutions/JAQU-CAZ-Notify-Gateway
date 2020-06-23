@@ -816,7 +816,8 @@ steps:
         from_secret: jaqu_prod_aws_secret_access_key
       AWS_ACCOUNT_NAME: jaqu-prod
       AWS_DEFAULT_REGION: eu-west-2
-      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
+      # SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
     when:
       event:
         - pull_request
@@ -877,7 +878,8 @@ steps:
         from_secret: jaqu_prod_aws_secret_access_key
       AWS_ACCOUNT_NAME: jaqu-prod
       AWS_DEFAULT_REGION: eu-west-2
-      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
+      # SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
     when:
       event:
         - push
