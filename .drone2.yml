@@ -786,10 +786,8 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - mkdir ~/.aws
       - echo -e "[profile target_acc]\nrole_arn = $SRC_AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
-      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-sit
-      - ENV=sit
-      # - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-preprod
-      # - ENV=preprod
+      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-preprod
+      - ENV=preprod
       - SIGNED_URL=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
       - VERSION=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
       - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
@@ -816,8 +814,7 @@ steps:
         from_secret: jaqu_prod_aws_secret_access_key
       AWS_ACCOUNT_NAME: jaqu-prod
       AWS_DEFAULT_REGION: eu-west-2
-      # SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
-      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
     when:
       event:
         - pull_request
@@ -848,10 +845,8 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - mkdir ~/.aws
       - echo -e "[profile target_acc]\nrole_arn = $SRC_AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
-      # - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-preprod
-      # - ENV=preprod
-      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-sit
-      - ENV=sit
+      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-preprod
+      - ENV=preprod
       - SIGNED_URL=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
       - VERSION=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
       - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
@@ -878,8 +873,7 @@ steps:
         from_secret: jaqu_prod_aws_secret_access_key
       AWS_ACCOUNT_NAME: jaqu-prod
       AWS_DEFAULT_REGION: eu-west-2
-      # SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
-      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
     when:
       event:
         - push
