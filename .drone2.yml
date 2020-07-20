@@ -5,7 +5,7 @@ name: notification-gateway-dev
 
 trigger:
   branch:
-    - iac-restructure-baseline
+    - develop
   event:
     - pull_request
     - push
@@ -146,7 +146,7 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_baseline
+      - git checkout lower_dev
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
@@ -205,7 +205,7 @@ name: notification-gateway-st
 
 trigger:
   branch:
-    - iac-restructure-controlled-st
+    - release-candidate/*
   event:
     - pull_request
     - push
@@ -298,7 +298,7 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_controlled
+      - git checkout controlled_st
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
@@ -346,7 +346,7 @@ steps:
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_controlled
+      - git checkout controlled_st
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
@@ -403,7 +403,7 @@ name: notification-gateway-sit
 
 trigger:
   branch:
-    - iac-restructure-controlled-sit
+    - release/*
   event:
     - pull_request
     - push
@@ -496,7 +496,7 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_controlled
+      - git checkout controlled_sit
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
@@ -545,7 +545,7 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_controlled
+      - git checkout controlled_sit
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
@@ -602,7 +602,7 @@ name: notification-gateway-preprod
 
 trigger:
   branch:
-    - iac-restructure-staging-preprod
+    - staging
   event:
     - pull_request
     - push
@@ -639,7 +639,7 @@ steps:
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_staging
+      - git checkout staging_preprod
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
@@ -698,7 +698,7 @@ steps:
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_staging
+      - git checkout staging_preprod
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
@@ -748,6 +748,195 @@ steps:
 
   ################################################# End of Preprod environment #######################################################
 
+---
+################################################### UAT Environment Steps ########################################################
+kind: pipeline
+type: docker
+name: notification-gateway-uat
+
+trigger:
+  branch:
+    - uat/*
+  event:
+    - pull_request
+    - push
+concurrency:
+  limit: 1
+
+volumes:
+  - name: package_directory
+    temp: {}
+
+steps:
+
+  # Clean agent images and containers to prevent disk space overuse
+  - name: clean agent
+    image: docker:19.03.11-git
+    commands:
+      - docker system prune -f
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Build docker images
+  - name: build docker maven base
+    image: docker:19.03.11-git
+    commands:
+      - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Unit test
+  - name: unit test
+    image: notification-gateway-api-base
+    pull: never
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    commands:
+      - mvn test -P jacoco --no-transfer-progress
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+
+  # Package
+  - name: package
+    image: notification-gateway-api-base
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+      BUILD_ID: ${DRONE_BUILD_NUMBER}
+    pull: never
+    commands:
+      - mvn package -DskipUnitTests
+
+  - name: plan deployment into uat
+    image: hashicorp/terraform:0.12.3
+    volumes:
+      - name: package_directory
+        path: /opt/package
+    commands:
+      - apk update && apk add bash
+      - mkdir ~/.ssh
+      - echo -e "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - touch ~/.ssh/known_hosts
+      - chmod 600 ~/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
+      - cd JAQU-CAZ-IAC
+      - git checkout controlled_uat
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
+      - PATH=$PATH:../../../../bin/
+      - chmod +x ../../../../bin/tf
+      - tf init
+      - tf workspace select uat || tf workspace new uat
+      - tf plan
+    environment:
+      TF_VAR_access_key:
+        from_secret: jaqu_staging_aws_access_key_id
+      TF_VAR_secret_key:
+        from_secret: jaqu_staging_aws_secret_access_key
+      GIT_PRIVATE_SSH:
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_staging_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_staging_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-staging
+      AWS_DEFAULT_REGION: eu-west-2
+    when:
+      event:
+        - pull_request
+
+  - name: provisioning warning
+    image: docker:19.03.11-git
+    commands:
+      - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
+    when:
+      status:
+        - failure
+
+
+  # Invoke terraform scripts to deploy lambda function
+  - name: deploy to uat
+    image: hashicorp/terraform:0.12.3
+    volumes:
+      - name: package_directory
+        path: /opt/package
+    commands:
+      - apk update && apk add bash
+      - mkdir ~/.ssh
+      - echo -e "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - touch ~/.ssh/known_hosts
+      - chmod 600 ~/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - cd JAQU-CAZ-IAC
+      - git checkout controlled_uat
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
+      - PATH=$PATH:../../../../bin/
+      - chmod +x ../../../../bin/tf
+      - tf init
+      - tf workspace select uat || tf workspace new uat
+      - tf apply -auto-approve
+    environment:
+      TF_VAR_access_key:
+        from_secret: jaqu_staging_aws_access_key_id
+      TF_VAR_secret_key:
+        from_secret: jaqu_staging_aws_secret_access_key
+      GIT_PRIVATE_SSH:
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_staging_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_staging_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-staging
+      AWS_DEFAULT_REGION: eu-west-2
+    when:
+      event:
+        - push
+
+  - name: codedeploy api uat
+    image: alpine:3.11.6
+    commands:
+      - apk add --update bash python python-dev py-pip build-base jq
+      - pip install awscli
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
+      - bash deploy_lambda.sh
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_staging_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_staging_aws_secret_access_key
+      AWS_DEFAULT_REGION: eu-west-2
+      AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
+      PROJECT: notify
+      DEPLOY_ENVIRONMENT: uat
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
+    when:
+      event:
+        - push
+
+  ################################################# End of UAT environment #######################################################
 
 ---
 ################################################### Prod Environment Steps ########################################################
@@ -794,7 +983,7 @@ steps:
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_prod
+      - git checkout prod_live
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
@@ -853,7 +1042,7 @@ steps:
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout iac_restructure_prod
+      - git checkout prod_live
       - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
