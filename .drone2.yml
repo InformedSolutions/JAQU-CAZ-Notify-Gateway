@@ -766,6 +766,13 @@ concurrency:
 volumes:
   - name: package_directory
     temp: {}
+    
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
+      
+  - name: m2_repo
+    temp: {}
 
 steps:
 
