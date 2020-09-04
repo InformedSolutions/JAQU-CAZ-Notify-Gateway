@@ -4,6 +4,7 @@ import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.GetQueueUrlResult;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.List;
@@ -51,7 +52,8 @@ public class MessageHandlingService {
         messagingClient.handleMessage(request);
       } catch (IOException | InstantiationException e) {
         log.error("Failed to process message with id: {}", message.getMessageId());
-        messagingClient.publishMessage(dlqName, message.getBody());
+        SendMessageRequest request = messagingClient.createSendMessageRequest(message.getBody());
+        messagingClient.publishMessage(dlqName, request);
       }
       amazonSqs.deleteMessage(this.queueUrl, message.getReceiptHandle());
     }

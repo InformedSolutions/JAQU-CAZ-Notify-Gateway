@@ -1,8 +1,11 @@
 package uk.gov.caz.notify.domain;
 
 public enum QueueName {
-  NEW("new"), REQUEST_LIMIT("request-limit"), SERVICE_ERROR(
-      "service-error"), SERVICE_DOWN("service-down");
+  NEW("new"), 
+  REQUEST_LIMIT("request-limit"), 
+  SERVICE_ERROR("service-error"), 
+  SERVICE_DOWN("service-down"),
+  DLQ("dlq");
 
   private final String text;
 

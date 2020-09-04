@@ -1,6 +1,7 @@
 package uk.gov.caz.notify.messaging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 
@@ -69,6 +70,18 @@ public class MessagingClientTest {
     ReflectionTestUtils.setField(messagingClient, "serviceErrorQueue", "serviceError");
   }
 
+  @Test
+  void canSuccessfullyPublishMessage() {
+    String queue = "dlq";
+    SendMessageRequest request = new SendMessageRequest();
+    mockQueueUrl();
+    
+    messagingClient.publishMessage(queue, request);
+    
+    // assertions
+    Mockito.verify(client, times(1)).sendMessage(request);
+  }
+  
   @Test
   void canSendBadRequestErrorToDlq()
       throws NotificationClientException, IOException, InstantiationException {
@@ -195,7 +208,7 @@ public class MessagingClientTest {
         reference);
     Mockito.verify(client, times(1)).sendMessage(Mockito.any(SendMessageRequest.class));
   }
-
+  
   @ParameterizedTest
   @MethodSource("queuesAndFields")
   void shouldReturnNameOfTheQueue(String queueName, String fieldName, String fieldValue) {
@@ -205,13 +218,21 @@ public class MessagingClientTest {
 
     assertThat(envQueueName).isEqualTo(fieldValue);
   }
+  
+  @Test
+  void shouldCreateSendEmailRequest() {
+    String message = "\"test\": \"123\"";
+    SendMessageRequest sendMessageRequest = messagingClient.createSendMessageRequest(message);
+    assertEquals(message, sendMessageRequest.getMessageBody());
+  }
 
   private static Stream<Arguments> queuesAndFields() {
     return Stream.of(
         Arguments.of("new", "newQueue", "newQueueName"),
         Arguments.of("request-limit", "requestLimitQueue", "requestLimitQueueName"),
         Arguments.of("service-down", "serviceDownQueue", "serviceDownQueueName"),
-        Arguments.of("service-error", "serviceErrorQueue", "serviceErrorQueueName")
+        Arguments.of("service-error", "serviceErrorQueue", "serviceErrorQueueName"),
+        Arguments.of("dlq", "deadLetterQueue", "deadLetterQueueName")
     );
   }
 

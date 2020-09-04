@@ -70,24 +70,12 @@ public class MessagingClient {
    * @param queueName the queue which the message should be sent to
    * @param message the message object
    */
-  public void publishMessage(String queueName, String message) {
-    SendMessageRequest sendMessageRequest = new SendMessageRequest();
-    UUID messageDeduplicationId = UUID.randomUUID();
-
-    sendMessageRequest.setMessageGroupId(UUID.randomUUID().toString());
-    sendMessageRequest.setMessageDeduplicationId(messageDeduplicationId.toString());
-    sendMessageRequest.putCustomRequestHeader("contentType", "application/json");
-    sendMessageRequest.setQueueUrl(client.getQueueUrl(queueName).getQueueUrl());
-
-    try {
-      sendMessageRequest.setMessageBody(objectMapper.writeValueAsString(message));
-    } catch (JsonProcessingException e) {
-      log.error(e.getMessage());
-    }
+  public void publishMessage(String queueName, SendMessageRequest message) {
+    message.setQueueUrl(client.getQueueUrl(queueName).getQueueUrl());
 
     log.info("Sending email message object to SQS queue {} with de-duplication ID: {}", queueName,
-        messageDeduplicationId);
-    client.sendMessage(sendMessageRequest);
+        message.getMessageDeduplicationId());
+    client.sendMessage(message);
   }
 
   /**
@@ -125,6 +113,8 @@ public class MessagingClient {
   public void handleMessage(SendEmailRequest sendEmailRequest)
       throws JsonProcessingException, InstantiationException {
     String msgBody = objectMapper.writeValueAsString(sendEmailRequest);
+    SendMessageRequest message = createSendMessageRequest(msgBody);
+    
     try {
       log.info("Sending email initiated");
       govUkNotifyWrapper
@@ -142,7 +132,7 @@ public class MessagingClient {
         case 400:
         case 403:
           log.info(PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE);
-          publishMessage(deadLetterQueue, msgBody);
+          publishMessage(deadLetterQueue, message);
           break;
         case 429:
           success = retryMessage(sendEmailRequest, 3);
@@ -150,7 +140,7 @@ public class MessagingClient {
             log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
             log.info(PUBLISHING_MESSAGE_TO_THE_REQUEST_LIMIT_QUEUE);
-            publishMessage(requestLimitQueue, msgBody);
+            publishMessage(requestLimitQueue, message);
           }
           break;
         case 500:
@@ -159,7 +149,7 @@ public class MessagingClient {
             log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
             log.info(PUBLISHING_MESSAGE_TO_THE_ERROR_QUEUE);
-            publishMessage(serviceErrorQueue, msgBody);
+            publishMessage(serviceErrorQueue, message);
           }
           break;
         case 503:
@@ -168,7 +158,7 @@ public class MessagingClient {
             log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
             log.info(PUBLISHING_MESSAGE_TO_THE_DOWN_LETTER_QUEUE);
-            publishMessage(serviceDownQueue, msgBody);
+            publishMessage(serviceDownQueue, message);
           }
           break;
         default:
@@ -177,13 +167,13 @@ public class MessagingClient {
             log.info(MESSAGE_SUCCESSFULLY_SENT);
           } else {
             log.info(PUBLISHING_MESSAGE_TO_THE_DEAD_LETTER_QUEUE);
-            publishMessage(deadLetterQueue, msgBody);
+            publishMessage(deadLetterQueue, message);
           }
           break;
       }
     } catch (IOException e) {
       log.error(e.getMessage());
-      publishMessage(deadLetterQueue, msgBody);
+      publishMessage(deadLetterQueue, message);
     }
   }
 
@@ -203,8 +193,27 @@ public class MessagingClient {
       return this.serviceErrorQueue;
     } else if (queueName.equals(QueueName.SERVICE_DOWN.toString())) {
       return this.serviceDownQueue;
+    } else if (queueName.equals(QueueName.DLQ.toString())) {
+      return this.deadLetterQueue;
     } else {
       throw new IllegalArgumentException("Queue name not recognised.");
     }
+  }
+  
+  /**
+   * Creates an instance of {@link SendMessageRequest} from a message body String.
+   * @param messageBody A String containing the body of the message
+   * @return an instance of {@link SendMessageRequest}
+   */
+  public SendMessageRequest createSendMessageRequest(String messageBody) {
+    SendMessageRequest sendMessageRequest = new SendMessageRequest();
+    UUID messageDeduplicationId = UUID.randomUUID();
+
+    sendMessageRequest.setMessageGroupId(UUID.randomUUID().toString());
+    sendMessageRequest.setMessageDeduplicationId(messageDeduplicationId.toString());
+    sendMessageRequest.putCustomRequestHeader("contentType", "application/json");
+    sendMessageRequest.setMessageBody(messageBody);
+    
+    return sendMessageRequest;
   }
 }
