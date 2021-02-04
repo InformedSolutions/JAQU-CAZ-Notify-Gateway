@@ -1,5 +1,4 @@
-################################################### DEV Steps ########################################################
-
+################################################### Dev Environment Steps ########################################################
 kind: pipeline
 type: docker
 name: notification-gateway-dev
@@ -29,7 +28,7 @@ steps:
 
   # Clean agent images and containers to prevent disk space overuse
   - name: clean agent
-    image: docker
+    image: docker:19.03.11-git
     commands:
       - docker system prune -f
     volumes:
@@ -38,7 +37,7 @@ steps:
 
   # Build docker images
   - name: build docker maven base
-    image: docker
+    image: docker:19.03.11-git
     commands:
       - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
     volumes:
@@ -58,11 +57,11 @@ steps:
       - mvn test -P jacoco --no-transfer-progress
     environment:
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
+        from_secret: jaqu_lower_nexus_password
 
   # Integration tests
   - name: integration test
@@ -76,11 +75,11 @@ steps:
     environment:
       BUILD_ID: ${DRONE_BUILD_NUMBER}
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
+        from_secret: jaqu_lower_nexus_password
     commands:
       - mvn verify -DskipUnitTests -P jacoco --no-transfer-progress
 
@@ -94,19 +93,18 @@ steps:
         path: /root/.m2
     environment:
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
+        from_secret: jaqu_lower_nexus_password
       SONAR_HOST:
-        from_secret: sonar_host
+        from_secret: jaqu_lower_sonar_host
       SONAR_TOKEN:
-        from_secret: sonar_token
+        from_secret: jaqu_lower_sonar_token
     pull: never
     commands:
-      - mvn sonar:sonar -Dsonar.host.url=$SONAR_HOST
-        -Dsonar.projectKey=${DRONE_REPO}
+      - mvn -U sonar:sonar -Dsonar.host.url=$SONAR_HOST
         -Dsonar.projectName=${DRONE_REPO}
         -Dsonar.login=$SONAR_TOKEN
         -Dsonar.coverage.jacoco.xmlReportPaths=/drone/src/target/site/jacoco-aggregate/jacoco.xml
@@ -122,11 +120,11 @@ steps:
         path: /root/.m2
     environment:
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
+        from_secret: jaqu_lower_nexus_password
       BUILD_ID: ${DRONE_BUILD_NUMBER}
     pull: never
     commands:
@@ -134,7 +132,7 @@ steps:
 
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to dev
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -148,57 +146,58 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
+      - git checkout lower_dev
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
       - tf workspace select dev
+      - tf init
       - tf apply -auto-approve
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_lower_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_lower_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_lower_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_lower_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-lower
     when:
       event:
         - push
 
   - name: codedeploy api dev
-    image: alpine:latest
+    image: alpine:3.11.6
     commands:
       - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
-      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh .
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
       - bash deploy_lambda.sh
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_lower_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_lower_aws_secret_access_key
       AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
+      AWS_ACCOUNT_ROLE: arn:aws:iam::311075478274:role/jaqu-lowerServiceRole
+      PROJECT: notify
       DEPLOY_ENVIRONMENT: dev
-      LAMBDA_BUCKET: jaqu-projects-lambda-bucket
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
     when:
       event:
         - push
 
-  ################################################# End DEV Steps #######################################################
+  ################################################# End Dev Environment Steps #######################################################
+
 ---
-
-
-
-
-
-
-
-
-
-
-################################################### ST Steps ########################################################
+################################################### ST Environment Steps ########################################################
 
 kind: pipeline
 type: docker
@@ -229,7 +228,7 @@ steps:
 
   # Clean agent images and containers to prevent disk space overuse
   - name: clean agent
-    image: docker
+    image: docker:19.03.11-git
     commands:
       - docker system prune -f
     volumes:
@@ -238,7 +237,7 @@ steps:
 
   # Build docker images
   - name: build docker maven base
-    image: docker
+    image: docker:19.03.11-git
     commands:
       - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
     volumes:
@@ -258,12 +257,11 @@ steps:
       - mvn test -P jacoco --no-transfer-progress
     environment:
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
-
+        from_secret: jaqu_lower_nexus_password
 
   # Package
   - name: package
@@ -275,18 +273,18 @@ steps:
         path: /root/.m2
     environment:
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
+        from_secret: jaqu_lower_nexus_password
       BUILD_ID: ${DRONE_BUILD_NUMBER}
     pull: never
     commands:
       - mvn package -DskipUnitTests
 
-  - name: plan updates in st
-    image: hashicorp/terraform:0.12.3
+  - name: plan deployment into st
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -300,9 +298,9 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout st
+      - git checkout controlled_st
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -310,26 +308,32 @@ steps:
       - tf plan
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_controlled_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_controlled_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_controlled_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_controlled_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-controlled
     when:
       event:
-        - pull_request
+        - push
 
   - name: provisioning warning
-    image: docker:git
+    image: docker:19.03.11-git
     commands:
       - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
     when:
       status:
         - failure
 
+
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to st
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -341,11 +345,10 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout st
+      - git checkout controlled_st
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -353,57 +356,47 @@ steps:
       - tf apply -auto-approve
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_controlled_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_controlled_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_controlled_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_controlled_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-controlled
     when:
       event:
         - push
 
   - name: codedeploy api st
-    image: alpine:latest
+    image: alpine:3.11.6
     commands:
       - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
-      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh .
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
       - bash deploy_lambda.sh
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_controlled_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_controlled_aws_secret_access_key
       AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
+      AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
+      PROJECT: notify
       DEPLOY_ENVIRONMENT: st
-      LAMBDA_BUCKET: jaqu-projects-lambda-bucket
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
     when:
       event:
         - push
 
+  ################################################# End ST Environment #######################################################
 
-  ################################################# End ST Steps #######################################################
 ---
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-################################################### SIT Steps ########################################################
-
+################################################### SIT Environment Steps ########################################################
 kind: pipeline
 type: docker
 name: notification-gateway-sit
@@ -433,7 +426,7 @@ steps:
 
   # Clean agent images and containers to prevent disk space overuse
   - name: clean agent
-    image: docker
+    image: docker:19.03.11-git
     commands:
       - docker system prune -f
     volumes:
@@ -442,7 +435,7 @@ steps:
 
   # Build docker images
   - name: build docker maven base
-    image: docker
+    image: docker:19.03.11-git
     commands:
       - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
     volumes:
@@ -462,12 +455,11 @@ steps:
       - mvn test -P jacoco --no-transfer-progress
     environment:
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
-
+        from_secret: jaqu_lower_nexus_password
 
   # Package
   - name: package
@@ -479,18 +471,18 @@ steps:
         path: /root/.m2
     environment:
       JAQU_NEXUS_URL:
-        from_secret: nexus_url
+        from_secret: jaqu_lower_nexus_url
       JAQU_NEXUS_USER:
-        from_secret: nexus_username
+        from_secret: jaqu_lower_nexus_username
       JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
+        from_secret: jaqu_lower_nexus_password
       BUILD_ID: ${DRONE_BUILD_NUMBER}
     pull: never
     commands:
       - mvn package -DskipUnitTests
 
-  - name: plan updates in sit
-    image: hashicorp/terraform:0.12.3
+  - name: plan deployment into sit
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -504,9 +496,9 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout sit
+      - git checkout controlled_sit
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -514,26 +506,32 @@ steps:
       - tf plan
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_controlled_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_controlled_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_controlled_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_controlled_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-controlled
     when:
       event:
         - pull_request
 
   - name: provisioning warning
-    image: docker:git
+    image: docker:19.03.11-git
     commands:
       - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
     when:
       status:
         - failure
 
+
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to sit
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -547,9 +545,9 @@ steps:
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout sit
+      - git checkout controlled_sit
       - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -557,239 +555,47 @@ steps:
       - tf apply -auto-approve
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_controlled_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_controlled_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_controlled_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_controlled_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-controlled
     when:
       event:
         - push
 
   - name: codedeploy api sit
-    image: alpine:latest
+    image: alpine:3.11.6
     commands:
       - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
-      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh .
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
       - bash deploy_lambda.sh
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_controlled_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_controlled_aws_secret_access_key
       AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
+      AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
+      PROJECT: notify
       DEPLOY_ENVIRONMENT: sit
-      LAMBDA_BUCKET: jaqu-projects-lambda-bucket
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
     when:
       event:
         - push
 
+  ################################################# End of Sit Environment #######################################################
 
-  ################################################# End SIT Steps #######################################################
 ---
-
-
-
-
-
-
-
-
-
-
-################################################### UAT Steps ########################################################
-
-kind: pipeline
-type: docker
-name: notification-gateway-uat
-
-trigger:
-  branch:
-    - uat/*
-  event:
-    - pull_request
-    - push
-concurrency:
-  limit: 1
-
-volumes:
-  - name: docker_sock
-    host:
-      path: /var/run/docker.sock
-
-  - name: package_directory
-    temp: {}
-
-  - name: m2_repo
-    temp: {}
-
-
-steps:
-
-  # Clean agent images and containers to prevent disk space overuse
-  - name: clean agent
-    image: docker
-    commands:
-      - docker system prune -f
-    volumes:
-      - name: docker_sock
-        path: /var/run/docker.sock
-
-  # Build docker images
-  - name: build docker maven base
-    image: docker
-    commands:
-      - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
-    volumes:
-      - name: docker_sock
-        path: /var/run/docker.sock
-
-  # Unit test
-  - name: unit test
-    image: notification-gateway-api-base
-    pull: never
-    volumes:
-      - name: package_directory
-        path: /drone/src/target
-      - name: m2_repo
-        path: /root/.m2
-    commands:
-      - mvn test -P jacoco --no-transfer-progress
-    environment:
-      JAQU_NEXUS_URL:
-        from_secret: nexus_url
-      JAQU_NEXUS_USER:
-        from_secret: nexus_username
-      JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
-
-
-  # Package
-  - name: package
-    image: notification-gateway-api-base
-    volumes:
-      - name: package_directory
-        path: /drone/src/target
-      - name: m2_repo
-        path: /root/.m2
-    environment:
-      JAQU_NEXUS_URL:
-        from_secret: nexus_url
-      JAQU_NEXUS_USER:
-        from_secret: nexus_username
-      JAQU_NEXUS_PASSWORD:
-        from_secret: nexus_password
-      BUILD_ID: ${DRONE_BUILD_NUMBER}
-    pull: never
-    commands:
-      - mvn package -DskipUnitTests
-
-  - name: plan updates in uat
-    image: hashicorp/terraform:0.12.3
-    volumes:
-      - name: package_directory
-        path: /opt/package
-    commands:
-      - apk update && apk add bash
-      - mkdir ~/.ssh
-      - echo -e "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
-      - chmod 600 ~/.ssh/id_rsa
-      - touch ~/.ssh/known_hosts
-      - chmod 600 ~/.ssh/known_hosts
-      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
-      - cd JAQU-CAZ-IAC
-      - git checkout uat
-      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
-      - PATH=$PATH:../../../../bin/
-      - chmod +x ../../../../bin/tf
-      - tf init
-      - tf workspace select uat || tf workspace new uat
-      - tf plan
-    environment:
-      TF_VAR_access_key:
-        from_secret: aws_access_key_id
-      TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
-      GIT_PRIVATE_SSH:
-        from_secret: github_private_key
-    when:
-      event:
-        - pull_request
-
-  - name: provisioning warning
-    image: docker:git
-    commands:
-      - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
-    when:
-      status:
-        - failure
-
-  # Invoke terraform scripts to deploy lambda function
-  - name: deploy to uat
-    image: hashicorp/terraform:0.12.3
-    volumes:
-      - name: package_directory
-        path: /opt/package
-    commands:
-      - apk update && apk add bash
-      - mkdir ~/.ssh
-      - echo -e "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
-      - chmod 600 ~/.ssh/id_rsa
-      - touch ~/.ssh/known_hosts
-      - chmod 600 ~/.ssh/known_hosts
-      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
-      - cd JAQU-CAZ-IAC
-      - git checkout uat
-      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
-      - PATH=$PATH:../../../../bin/
-      - chmod +x ../../../../bin/tf
-      - tf init
-      - tf workspace select uat || tf workspace new uat
-      - tf apply -auto-approve
-    environment:
-      TF_VAR_access_key:
-        from_secret: aws_access_key_id
-      TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
-      GIT_PRIVATE_SSH:
-        from_secret: github_private_key
-    when:
-      event:
-        - push
-
-  - name: codedeploy api uat
-    image: alpine:latest
-    commands:
-      - apk add --update bash python python-dev py-pip build-base jq
-      - pip install awscli
-      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh .
-      - bash deploy_lambda.sh
-    environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
-      AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
-      DEPLOY_ENVIRONMENT: uat
-      LAMBDA_BUCKET: jaqu-projects-lambda-bucket
-    when:
-      event:
-        - push
-
-
-  ################################################# End UAT Steps #######################################################
----
-
-
-################################################### Preprod Steps ########################################################
-
+################################################### Preprod Environment Steps ########################################################
 kind: pipeline
 type: docker
 name: notification-gateway-preprod
@@ -807,12 +613,10 @@ volumes:
   - name: package_directory
     temp: {}
 
-
 steps:
 
-  # Invoke terraform scripts to deploy lambda function in Pre-prod
-  - name: plan terraform updates in preprod
-    image: hashicorp/terraform:0.12.3
+  - name: plan deployment into preprod
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -825,17 +629,18 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-sit
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $SRC_AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-sit
       - ENV=sit
-      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
-      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - SIGNED_URL=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
       - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout preprod
-      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - git checkout staging_preprod
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -843,33 +648,34 @@ steps:
       - tf plan
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_staging_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
-      TF_VAR_account_id:
-        from_secret: aws_account_id
+        from_secret: jaqu_staging_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_staging_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_staging_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-staging
       AWS_DEFAULT_REGION: eu-west-2
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
     when:
       event:
         - pull_request
 
   - name: provisioning warning
-    image: docker:git
+    image: docker:19.03.11-git
     commands:
       - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
     when:
       status:
         - failure
 
-  # Invoke terraform scripts to deploy lambda function in preproduction
+
+  # Invoke terraform scripts to deploy lambda function
   - name: deploy to preprod
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -882,17 +688,18 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-sit
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $SRC_AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-sit
       - ENV=sit
-      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
-      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - SIGNED_URL=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
       - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout preprod
-      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - git checkout staging_preprod
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -900,65 +707,249 @@ steps:
       - tf apply -auto-approve
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_staging_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
-      TF_VAR_account_id:
-        from_secret: aws_account_id
+        from_secret: jaqu_staging_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_staging_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_staging_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-staging
       AWS_DEFAULT_REGION: eu-west-2
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::072187228077:role/jaqu-controlledServiceRole
     when:
       event:
         - push
 
   - name: codedeploy api preprod
-    image: alpine:latest
+    image: alpine:3.11.6
     commands:
       - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
-      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh .
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
       - bash deploy_lambda.sh
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_staging_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_staging_aws_secret_access_key
       AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
+      AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
+      PROJECT: notify
       DEPLOY_ENVIRONMENT: preprod
-      LAMBDA_BUCKET: jaqu-projects-lambda-bucket
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
     when:
       event:
         - push
 
-  # subscribe to operational monitoring alert in api preprod
-  - name: subscribe to operational monitoring alert in api preprod
-    image: alpine:latest
+  ################################################# End of Preprod environment #######################################################
+
+---
+################################################### UAT Environment Steps ########################################################
+kind: pipeline
+type: docker
+name: notification-gateway-uat
+
+trigger:
+  branch:
+    - uat/*
+  event:
+    - pull_request
+    - push
+concurrency:
+  limit: 1
+
+volumes:
+  - name: package_directory
+    temp: {}
+
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
+
+  - name: m2_repo
+    temp: {}
+
+steps:
+
+  # Clean agent images and containers to prevent disk space overuse
+  - name: clean agent
+    image: docker:19.03.11-git
     commands:
-      - apk add --update bash python python-dev py-pip build-base
+      - docker system prune -f
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Build docker images
+  - name: build docker maven base
+    image: docker:19.03.11-git
+    commands:
+      - docker build -t notification-gateway-api-base -f ci-cd-resources/Dockerfile.ci.base .
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+  # Unit test
+  - name: unit test
+    image: notification-gateway-api-base
+    pull: never
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    commands:
+      - mvn test -P jacoco --no-transfer-progress
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+
+  # Package
+  - name: package
+    image: notification-gateway-api-base
+    volumes:
+      - name: package_directory
+        path: /drone/src/target
+      - name: m2_repo
+        path: /root/.m2
+    environment:
+      JAQU_NEXUS_URL:
+        from_secret: jaqu_lower_nexus_url
+      JAQU_NEXUS_USER:
+        from_secret: jaqu_lower_nexus_username
+      JAQU_NEXUS_PASSWORD:
+        from_secret: jaqu_lower_nexus_password
+      BUILD_ID: ${DRONE_BUILD_NUMBER}
+    pull: never
+    commands:
+      - mvn package -DskipUnitTests
+
+  - name: plan deployment into uat
+    image: hashicorp/terraform:0.12.23
+    volumes:
+      - name: package_directory
+        path: /opt/package
+    commands:
+      - apk update && apk add bash
+      - mkdir ~/.ssh
+      - echo -e "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - touch ~/.ssh/known_hosts
+      - chmod 600 ~/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
+      - cd JAQU-CAZ-IAC
+      - git checkout staging_uat
+      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
+      - PATH=$PATH:../../../../bin/
+      - chmod +x ../../../../bin/tf
+      - tf init
+      - tf workspace select uat || tf workspace new uat
+      - tf plan
+    environment:
+      TF_VAR_access_key:
+        from_secret: jaqu_staging_aws_access_key_id
+      TF_VAR_secret_key:
+        from_secret: jaqu_staging_aws_secret_access_key
+      GIT_PRIVATE_SSH:
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_staging_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_staging_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-staging
+      AWS_DEFAULT_REGION: eu-west-2
+    when:
+      event:
+        - pull_request
+
+  - name: provisioning warning
+    image: docker:19.03.11-git
+    commands:
+      - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
+    when:
+      status:
+        - failure
+
+
+  # Invoke terraform scripts to deploy lambda function
+  - name: deploy to uat
+    image: hashicorp/terraform:0.12.23
+    volumes:
+      - name: package_directory
+        path: /opt/package
+    commands:
+      - apk update && apk add bash
+      - mkdir ~/.ssh
+      - echo -e "$GIT_PRIVATE_SSH" > ~/.ssh/id_rsa
+      - chmod 600 ~/.ssh/id_rsa
+      - touch ~/.ssh/known_hosts
+      - chmod 600 ~/.ssh/known_hosts
+      - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
+      - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
+      - cd JAQU-CAZ-IAC
+      - git checkout staging_uat
+      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
+      - PATH=$PATH:../../../../bin/
+      - chmod +x ../../../../bin/tf
+      - tf init
+      - tf workspace select uat || tf workspace new uat
+      - tf apply -auto-approve
+    environment:
+      TF_VAR_access_key:
+        from_secret: jaqu_staging_aws_access_key_id
+      TF_VAR_secret_key:
+        from_secret: jaqu_staging_aws_secret_access_key
+      GIT_PRIVATE_SSH:
+        from_secret: jaqu_lower_github_private_key
+      AWS_ACCESS_KEY_ID:
+        from_secret: jaqu_staging_aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: jaqu_staging_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-staging
+      AWS_DEFAULT_REGION: eu-west-2
+    when:
+      event:
+        - push
+
+  - name: codedeploy api uat
+    image: alpine:3.11.6
+    commands:
+      - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
-      - python ./ci-cd-resources/subscribe_to_alert_topics.py --include $PROJECT,$DEPLOY_ENVIRONMENT --exclude dead,letter
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
+      - bash deploy_lambda.sh
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_staging_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_staging_aws_secret_access_key
       AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
-      DEPLOY_ENVIRONMENT: preprod
+      AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
+      PROJECT: notify
+      DEPLOY_ENVIRONMENT: uat
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
     when:
       event:
         - push
 
-  ################################################# End PreProd Steps #######################################################
----
-################################################### Production Steps ########################################################
+  ################################################# End of UAT environment #######################################################
 
+---
+################################################### Prod Environment Steps ########################################################
 kind: pipeline
 type: docker
 name: notification-gateway-prod
@@ -978,9 +969,8 @@ volumes:
 
 steps:
 
-  # Invoke terraform scripts to deploy lambda function in Pre-prod
-  - name: plan terraform updates in prod
-    image: hashicorp/terraform:0.12.3
+  - name: plan deployment into prod
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -993,17 +983,18 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-preprod
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $SRC_AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-preprod
       - ENV=preprod
-      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
-      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - SIGNED_URL=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
       - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout master
-      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - git checkout prod_live
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -1011,33 +1002,34 @@ steps:
       - tf plan
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_prod_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
-      TF_VAR_account_id:
-        from_secret: aws_account_id
+        from_secret: jaqu_prod_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_prod_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_prod_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-prod
       AWS_DEFAULT_REGION: eu-west-2
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
     when:
       event:
         - pull_request
 
   - name: provisioning warning
-    image: docker:git
+    image: docker:19.03.11-git
     commands:
       - echo "Pipeline failed. If a deployment is being made for the first time into an environment terraform backends will not yet exist which means this is to be expected. If not terraform related, please see logs for further details"
     when:
       status:
         - failure
 
-  # Invoke terraform scripts to deploy lambda function into Production
+
+  # Invoke terraform scripts to deploy lambda function
   - name: deploy to prod
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -1050,17 +1042,18 @@ steps:
       - touch ~/.ssh/known_hosts
       - chmod 600 ~/.ssh/known_hosts
       - ssh-keyscan -H github.com > /etc/ssh/ssh_known_hosts 2> /dev/null
-      - LAMBDA_FUNCTION=notify-gateway-jaqu-caz-lambda-preprod
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $SRC_AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - LAMBDA_FUNCTION=notify-jaqu-caz-lambda-preprod
       - ENV=preprod
-      - SIGNED_URL=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
-      - VERSION=`aws lambda get-function --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
+      - SIGNED_URL=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Code.Location'`
+      - VERSION=`aws lambda get-function --profile target_acc --function-name $LAMBDA_FUNCTION --qualifier $ENV| jq --raw-output '.Configuration.Version'`
       - wget -O /opt/package/$LAMBDA_FUNCTION-$VERSION.zip $SIGNED_URL
       - export TF_VAR_lambda_file=/opt/package/$LAMBDA_FUNCTION-$VERSION.zip
       - git clone git@github.com:InformedSolutions/JAQU-CAZ-IAC.git
       - cd JAQU-CAZ-IAC
-      - git checkout master
-      - export TF_VAR_lambda_file=$(ls /opt/package/*.zip | tail -1)
-      - cd terraform/projects/notify-gateway/layers/api
+      - git checkout prod_live
+      - cd terraform-iac/projects/notify-gateway/layers/01.api
       - PATH=$PATH:../../../../bin/
       - chmod +x ../../../../bin/tf
       - tf init
@@ -1068,124 +1061,149 @@ steps:
       - tf apply -auto-approve
     environment:
       TF_VAR_access_key:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_prod_aws_access_key_id
       TF_VAR_secret_key:
-        from_secret: aws_secret_access_key
-      TF_VAR_account_id:
-        from_secret: aws_account_id
+        from_secret: jaqu_prod_aws_secret_access_key
       GIT_PRIVATE_SSH:
-        from_secret: github_private_key
+        from_secret: jaqu_lower_github_private_key
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_prod_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_prod_aws_secret_access_key
+      AWS_ACCOUNT_NAME: jaqu-prod
       AWS_DEFAULT_REGION: eu-west-2
+      SRC_AWS_ACCOUNT_ROLE: arn:aws:iam::360470905865:role/jaqu-stagingServiceRole
     when:
       event:
         - push
 
   - name: codedeploy api prod
-    image: alpine:latest
+    image: alpine:3.11.6
     commands:
       - apk add --update bash python python-dev py-pip build-base jq
       - pip install awscli
-      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh .
+      - mkdir ~/.aws
+      - echo -e "[profile target_acc]\nrole_arn = $AWS_ACCOUNT_ROLE\ncredential_source = Environment\nrole_session_name = AWSACCOUNT" > ~/.aws/config
+      - aws s3 cp s3://$LAMBDA_BUCKET/$PROJECT/$DEPLOY_ENVIRONMENT/CodeDeploy/deploy_lambda.sh . --profile target_acc
       - bash deploy_lambda.sh
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
+        from_secret: jaqu_prod_aws_access_key_id
       AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
+        from_secret: jaqu_prod_aws_secret_access_key
       AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
+      AWS_ACCOUNT_ROLE: arn:aws:iam::286199435714:role/jaqu-prodServiceRole
+      PROJECT: notify
       DEPLOY_ENVIRONMENT: prod
-      LAMBDA_BUCKET: jaqu-projects-lambda-bucket
+      LAMBDA_BUCKET: jaqu-shared-project-lambda-bucket
     when:
       event:
         - push
 
-  # subscribe to operational monitoring alert in api production
-  - name: subscribe to operational monitoring alert in api prod
-    image: alpine:latest
-    commands:
-      - apk add --update bash python python-dev py-pip build-base
-      - pip install awscli
-      - python ./ci-cd-resources/subscribe_to_alert_topics.py --include $PROJECT,$DEPLOY_ENVIRONMENT --exclude dead,letter
-    environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: aws_access_key_id
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: aws_secret_access_key
-      AWS_DEFAULT_REGION: eu-west-2
-      PROJECT: notify-gateway
-      DEPLOY_ENVIRONMENT: prod
-    when:
-      event:
-        - push
+  ################################################# End of Prod environment #######################################################
 
-  ################################################# End Prod Steps #######################################################
-
-
-
-  ################################################ Secrets #########################################################
-
-
+  ################################################ Secrets - IAC Restructure #########################################################
 
 # Note the below values are pulled from AWS Secrets Manager via the aws-secrets Drone plugin
 ---
 kind: secret
-name: aws_access_key_id
+name: jaqu_lower_aws_access_key_id
 get:
-  path: /secret/drone.global
-  name: awsAccessKeyId
+  path: /build-tools/drone
+  name: awsLowerAccessKeyId
 
 ---
 kind: secret
-name: aws_secret_access_key
+name: jaqu_lower_aws_secret_access_key
 get:
-  path: /secret/drone.global
-  name: awsSecretAccessKey
+  path: /build-tools/drone
+  name: awsLowerSecretAccessKey
 
 ---
 kind: secret
-name: sonar_host
+name: jaqu_controlled_aws_access_key_id
 get:
-  path: /secret/drone.global
+  path: /build-tools/drone
+  name: awsControlledAccessKeyId
+
+---
+kind: secret
+name: jaqu_controlled_aws_secret_access_key
+get:
+  path: /build-tools/drone
+  name: awsControlledSecretAccessKey
+
+
+
+---
+kind: secret
+name: jaqu_staging_aws_access_key_id
+get:
+  path: /build-tools/drone
+  name: awsStagingAccessKeyId
+
+---
+kind: secret
+name: jaqu_staging_aws_secret_access_key
+get:
+  path: /build-tools/drone
+  name: awsStagingSecretAccessKey
+
+
+---
+kind: secret
+name: jaqu_prod_aws_access_key_id
+get:
+  path: /build-tools/drone
+  name: awsProdAccessKeyId
+
+---
+kind: secret
+name: jaqu_prod_aws_secret_access_key
+get:
+  path: /build-tools/drone
+  name: awsProdSecretAccessKey
+
+---
+kind: secret
+name: jaqu_lower_sonar_host
+get:
+  path: /build-tools/drone
   name: sonarHost
 
 ---
 kind: secret
-name: sonar_token
+name: jaqu_lower_sonar_token
 get:
-  path: /secret/drone.global
+  path: /build-tools/drone
   name: sonarToken
 
 ---
 kind: secret
-name: github_private_key
+name: jaqu_lower_github_private_key
 get:
-  path: /secret/drone.global
+  path: /build-tools/drone
   name: githubPrivateKey
 
 ---
 kind: secret
-name: nexus_url
+name: jaqu_lower_nexus_url
 get:
-  path: /secret/drone.global
+  path: /build-tools/drone
   name: nexusUrl
 
 ---
 kind: secret
-name: nexus_username
+name: jaqu_lower_nexus_username
 get:
-  path: /secret/drone.global
+  path: /build-tools/drone
   name: nexusUsername
 
 ---
 kind: secret
-name: nexus_password
+name: jaqu_lower_nexus_password
 get:
-  path: /secret/drone.global
+  path: /build-tools/drone
   name: nexusPassword
 
-  ################################################ End Secrets #########################################################
+################################################ End Secrets -IAC Resrucgture #########################################################
