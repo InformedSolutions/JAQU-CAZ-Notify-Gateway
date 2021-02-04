@@ -132,7 +132,7 @@ steps:
 
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to dev
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -284,7 +284,7 @@ steps:
       - mvn package -DskipUnitTests
 
   - name: plan deployment into st
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -333,7 +333,7 @@ steps:
 
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to st
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -482,7 +482,7 @@ steps:
       - mvn package -DskipUnitTests
 
   - name: plan deployment into sit
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -531,7 +531,7 @@ steps:
 
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to sit
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -616,7 +616,7 @@ volumes:
 steps:
 
   - name: plan deployment into preprod
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -675,7 +675,7 @@ steps:
 
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to preprod
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -834,7 +834,7 @@ steps:
       - mvn package -DskipUnitTests
 
   - name: plan deployment into uat
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -884,7 +884,7 @@ steps:
 
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to uat
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -970,7 +970,7 @@ volumes:
 steps:
 
   - name: plan deployment into prod
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
@@ -1029,7 +1029,7 @@ steps:
 
   # Invoke terraform scripts to deploy lambda function
   - name: deploy to prod
-    image: hashicorp/terraform:0.12.3
+    image: hashicorp/terraform:0.12.23
     volumes:
       - name: package_directory
         path: /opt/package
