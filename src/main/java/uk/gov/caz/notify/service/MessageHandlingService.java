@@ -24,7 +24,7 @@ public class MessageHandlingService {
 
   private final MessagingClient messagingClient;
 
-  @Value("${application.polling-iterations:1}")
+  @Value("${application.polling-iterations}")
   private int pollingIterations;
 
   @Value("${application.message-batch-rate}")
