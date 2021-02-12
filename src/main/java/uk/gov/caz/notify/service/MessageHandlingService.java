@@ -24,6 +24,9 @@ public class MessageHandlingService {
 
   private final MessagingClient messagingClient;
 
+  @Value("${application.polling-iterations:1}")
+  private int pollingIterations;
+
   @Value("${application.message-batch-rate}")
   private int messageBatchRate;
 
@@ -33,29 +36,42 @@ public class MessageHandlingService {
   private String queueUrl;
 
   /**
-   * Fetch messages from a queue and process each message. Send the message to the DLQ if the
-   * message body can't be deserialized or if the MessageGroupId header is missing.
+   * Fetch messages from a queue and process each message. Send the message to
+   * the DLQ if the message body can't be deserialized or if the MessageGroupId
+   * header is missing.
    * 
    * @param queueName the name of the queue to receive messages from
    */
   public void sendQueuedMessages(String queueName) {
 
     ObjectMapper objectMapper = new ObjectMapper();
-    List<Message> messageList = this.getQueueMessageByQueueUrl(queueName);
 
-    for (Message message : messageList) {
-      log.info("Processing message with ID: {}", message.getMessageId());
+    for (int i = 0; i < pollingIterations; i++) {
 
-      try {
-        SendEmailRequest request =
-            objectMapper.readValue(message.getBody(), SendEmailRequest.class);
-        messagingClient.handleMessage(request);
-      } catch (IOException | InstantiationException e) {
-        log.error("Failed to process message with id: {}", message.getMessageId());
-        SendMessageRequest request = messagingClient.createSendMessageRequest(message.getBody());
-        messagingClient.publishMessage(dlqName, request);
+      // Note the addition of 1 is to account for human readable logs (rather
+      // than being 0 indexed)
+      log.info(String.format("Beginning message dispatch iteration: %d", i + 1));
+
+      List<Message> messageList = this.getQueueMessageByQueueUrl(queueName);
+
+      for (Message message : messageList) {
+        log.info("Processing message with ID: {}", message.getMessageId());
+
+        try {
+          SendEmailRequest request =
+              objectMapper.readValue(message.getBody(), SendEmailRequest.class);
+          messagingClient.handleMessage(request);
+        } catch (IOException | InstantiationException e) {
+          log.error("Failed to process message with id: {}",
+              message.getMessageId());
+          SendMessageRequest request =
+              messagingClient.createSendMessageRequest(message.getBody());
+          messagingClient.publishMessage(dlqName, request);
+        }
+        amazonSqs.deleteMessage(this.queueUrl, message.getReceiptHandle());
       }
-      amazonSqs.deleteMessage(this.queueUrl, message.getReceiptHandle());
+
+      log.info(String.format("Finished message dispatch iteration: %d", i + 1));
     }
   }
 
@@ -69,9 +85,11 @@ public class MessageHandlingService {
 
     ReceiveMessageRequest messageRequest =
         new ReceiveMessageRequest(this.queueUrl).withWaitTimeSeconds(5)
-            .withMaxNumberOfMessages(messageBatchRate).withAttributeNames("MessageGroupId");
+            .withMaxNumberOfMessages(messageBatchRate)
+            .withAttributeNames("MessageGroupId");
 
-    List<Message> messages = amazonSqs.receiveMessage(messageRequest).getMessages();
+    List<Message> messages =
+        amazonSqs.receiveMessage(messageRequest).getMessages();
 
     log.info("Received total messages size: {}", messages.size());
 
