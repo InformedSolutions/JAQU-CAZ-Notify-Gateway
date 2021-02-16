@@ -6,6 +6,7 @@ application:
   title: Notify Gateway
   message-batch-rate: 10
   message-group-id-payments: PAYMENTS_RECEIPT
+  polling-iterations: 1
 
 job:
   notify-gateway:
