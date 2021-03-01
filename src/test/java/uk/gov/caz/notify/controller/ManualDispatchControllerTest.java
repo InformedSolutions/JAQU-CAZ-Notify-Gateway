@@ -1,6 +1,9 @@
 package uk.gov.caz.notify.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+
 import java.io.IOException;
 import java.util.UUID;
 import org.json.JSONObject;
@@ -12,8 +15,10 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
+import uk.gov.caz.notify.dto.MessageConsumerRequest;
 import uk.gov.caz.notify.dto.SendEmailRequest;
 import uk.gov.caz.notify.repository.GovUkNotifyWrapper;
+import uk.gov.caz.notify.service.MessageHandlingService;
 import uk.gov.service.notify.NotificationClientException;
 import uk.gov.service.notify.SendEmailResponse;
 
@@ -25,6 +30,9 @@ class ManualDispatchControllerTest {
 
   @Mock
   GovUkNotifyWrapper govUkNotifyWrapper;
+
+  @Mock
+  MessageHandlingService messageHandlingService;
 
   SendEmailRequest sendEmailRequest;
   SendEmailResponse sendEmailResponse;
@@ -83,4 +91,13 @@ class ManualDispatchControllerTest {
     assertEquals(400, testResponse.getStatusCode().value());
   }
 
+  @Test
+  void shouldReceiveMessageFromQueue() {
+    Mockito.doNothing().when(messageHandlingService).sendQueuedMessages(anyString());
+
+    ResponseEntity response = manualDispatchController
+        .receiveMessages(new MessageConsumerRequest("queue1"));
+
+    assertThat(response.getStatusCodeValue()).isEqualTo(200);
+  }
 }
