@@ -29,6 +29,9 @@ public class MessageHandlingService {
 
   @Value("${application.message-batch-rate}")
   private int messageBatchRate;
+  
+  @Value("${application.sqs-request-wait-time}")
+  private int sqsRequestWaitTime;
 
   @Value("${job.notify-gateway.dlq-url}")
   private String dlqName;
@@ -84,7 +87,8 @@ public class MessageHandlingService {
     this.queueUrl = getQueueUrlResult.getQueueUrl();
 
     ReceiveMessageRequest messageRequest =
-        new ReceiveMessageRequest(this.queueUrl).withWaitTimeSeconds(5)
+        new ReceiveMessageRequest(this.queueUrl)
+            .withWaitTimeSeconds(sqsRequestWaitTime)
             .withMaxNumberOfMessages(messageBatchRate)
             .withAttributeNames("MessageGroupId");
 
