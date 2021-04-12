@@ -6,6 +6,8 @@ application:
   title: Notify Gateway
   message-batch-rate: 10
   message-group-id-payments: PAYMENTS_RECEIPT
+  polling-iterations: 1
+  sqs-request-wait-time: 0
 
 job:
   notify-gateway:
